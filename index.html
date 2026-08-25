@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<!-- 本工作台通过 WorkBuddy 资料库能力（library skill）搭建、存储和部署 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>骨科随访工作台</title>
+<style>
+:root{
+  --primary:#2563eb; --primary-weak:#eff6ff; --bg:#f3f5f9; --card:#ffffff;
+  --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --danger:#dc2626; --danger-bg:#fef2f2;
+  --ok:#16a34a; --ok-bg:#f0fdf4; --warn:#d97706; --warn-bg:#fffbeb;
+  --radius:14px; --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--text); font-size:15px; line-height:1.55;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+/* ===== Header ===== */
+.mode-banner{background:#fffbeb;border-bottom:1px solid #fde68a;font-size:13px}
+.mode-banner-inner{max-width:960px;margin:0 auto;padding:9px 14px;display:flex;align-items:center;gap:10px}
+.mode-banner .mb-ico{color:#92400e;flex:0 0 auto;display:flex;align-items:center}
+.mode-banner .mb-text{flex:1;color:#78350f;line-height:1.5}
+.mode-banner .mb-text b{color:#92400e}
+.mode-banner .mb-text a{color:#2563eb;text-decoration:underline;cursor:pointer;margin:0 2px}
+.mode-banner .mb-text a:hover{color:#1d4ed8}
+.mode-banner .mb-close{font-size:22px;color:#92400e;width:30px;height:30px;border-radius:6px;line-height:1;flex:0 0 auto}
+.mode-banner .mb-close:hover{background:#fde68a}
+
+header{
+  background:linear-gradient(135deg,#1d4ed8,#2563eb 55%,#3b82f6);
+  color:#fff;padding:14px 16px 14px;position:sticky;top:0;z-index:50;
+  box-shadow:0 2px 8px rgba(29,78,216,.25);
+}
+.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.logo{
+  width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.16);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+}
+.logo svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.h-title{flex:1;min-width:0}
+.h-title h1{font-size:17px;font-weight:700;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-title p{font-size:12px;opacity:.85;margin-top:1px}
+.sync-badge{
+  display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;border-radius:999px;
+  background:rgba(255,255,255,.16);white-space:nowrap;flex:0 0 auto;
+}
+.sync-badge .dot{width:7px;height:7px;border-radius:50%;background:#4ade80}
+.sync-badge.off .dot{background:#fbbf24}
+.sync-badge.local .dot{background:#cbd5e1}
+.sync-btn{
+  width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.16);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-left:8px;
+}
+.sync-btn:hover{background:rgba(255,255,255,.28)}
+.sync-btn svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.form-row input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:15px}
+.form-tip{font-size:12.5px;color:var(--muted);background:var(--primary-weak);border:1px solid #dbeafe;padding:9px 11px;border-radius:10px;line-height:1.6}
+.form-tip code{background:#e0e7ff;padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* ===== Nav ===== */
+nav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:66px;z-index:40}
+.nav-inner{max-width:960px;margin:0 auto;display:flex;padding:0 12px}
+.nav-btn{
+  padding:12px 16px 11px;font-size:15px;color:var(--muted);font-weight:500;
+  border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;
+}
+.nav-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.nav-btn .cnt{
+  background:var(--danger);color:#fff;font-size:11px;border-radius:999px;padding:0 6px;min-width:18px;height:18px;
+  display:inline-flex;align-items:center;justify-content:center;margin-left:2px;
+}
+.nav-btn .cnt.zero{display:none}
+
+/* ===== Main ===== */
+main{max-width:960px;margin:0 auto;padding:16px 14px 96px}
+.view{display:none}
+.view.active{display:block}
+h2.sec-title{font-size:16px;font-weight:700;margin:6px 2px 12px;display:flex;align-items:center;gap:8px}
+h2.sec-title svg{width:18px;height:18px;stroke:var(--primary);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== Stats ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{
+  background:var(--card);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:2px;
+}
+.stat .num{font-size:22px;font-weight:800;line-height:1.2}
+.stat .lbl{font-size:12px;color:var(--muted)}
+.stat.danger .num{color:var(--danger)}
+.stat.primary .num{color:var(--primary)}
+.stat.ok .num{color:var(--ok)}
+
+/* ===== Cards ===== */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px}
+.card-pad{padding:14px}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.toolbar .grow{flex:1;min-width:120px}
+.search-box{
+  display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;flex:1;min-width:150px;
+}
+.search-box svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round}
+.search-box input{border:none;outline:none;flex:1;background:transparent}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--primary);color:#fff;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:600;
+  transition:opacity .15s;min-height:40px;
+}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn:hover{opacity:.9}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn.ghost:hover{background:#f9fafb}
+.btn.danger{background:var(--danger)}
+.btn.ok{background:var(--ok)}
+.btn.sm{padding:5px 10px;font-size:13px;min-height:34px;border-radius:8px}
+.btn.xs{padding:4px 9px;font-size:12.5px;min-height:30px;border-radius:7px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  padding:6px 12px;border-radius:999px;font-size:13px;background:#f3f4f6;color:var(--muted);
+  border:1px solid transparent;min-height:32px;display:inline-flex;align-items:center;
+}
+.chip.active{background:var(--primary-weak);color:var(--primary);border-color:var(--primary)}
+.chip .cnt{font-size:11px;margin-left:4px;opacity:.7}
+
+/* ===== Today list ===== */
+.today-group{margin-bottom:14px}
+.today-group .g-title{
+  display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin-bottom:8px;color:var(--muted);
+}
+.today-group .g-title .tag{padding:2px 8px;border-radius:6px;font-size:12px}
+.tag-overdue{background:var(--danger);color:#fff}
+.tag-today{background:var(--primary);color:#fff}
+.tag-soon{background:var(--warn-bg);color:var(--warn)}
+.task-item{
+  display:flex;gap:12px;align-items:flex-start;padding:13px 14px;border:1px solid var(--border);
+  border-radius:12px;background:#fff;margin-bottom:8px;box-shadow:var(--shadow);
+}
+.task-item.overdue{border-color:#fecaca;background:var(--danger-bg)}
+.task-item .t-ico{
+  width:34px;height:34px;border-radius:9px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+}
+.task-item .t-ico svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.t-ico.drug{background:#3b82f6}.t-ico.rehab{background:#22c55e}.t-ico.check{background:#8b5cf6}.t-ico.note{background:#6b7280}
+.task-item .t-body{flex:1;min-width:0}
+.task-item .t-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.task-item .t-name{font-weight:700;font-size:15px}
+.task-item .t-stage{font-size:12px;color:var(--muted)}
+.badge{font-size:11.5px;padding:2px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+.b-done{background:var(--ok-bg);color:var(--ok)}
+.b-wait{background:var(--warn-bg);color:var(--warn)}
+.b-skip{background:#f3f4f6;color:var(--muted)}
+.b-over{background:var(--danger-bg);color:var(--danger)}
+.task-item .t-meta{font-size:12.5px;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.task-item .t-content{
+  font-size:13.5px;color:#374151;background:#f9fafb;border-radius:8px;padding:8px 10px;margin-top:7px;
+  white-space:pre-wrap;word-break:break-word;
+}
+.task-item .t-actions{margin-top:9px;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ===== Patient list ===== */
+.patient-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.patient-grid{grid-template-columns:1fr}}
+.p-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
+.p-card:active{transform:scale(.985)}
+.p-card .p-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.p-avatar{
+  width:38px;height:38px;border-radius:50%;background:var(--primary-weak);color:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:0 0 auto;
+}
+.p-card .p-name{font-size:16px;font-weight:700}
+.p-card .p-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.p-card .p-info{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.p-card .p-info b{color:var(--text);font-weight:600}
+.p-card .p-foot{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap}
+.p-card .p-day{
+  margin-left:auto;font-size:12px;font-weight:700;color:var(--primary);background:var(--primary-weak);
+  padding:3px 8px;border-radius:6px;white-space:nowrap;
+}
+.status-tag{font-size:11.5px;padding:3px 9px;border-radius:999px;font-weight:700}
+.st-in{background:var(--primary-weak);color:var(--primary)}
+.st-fu{background:var(--warn-bg);color:var(--warn)}
+.st-done{background:#f3f4f6;color:var(--muted)}
+
+/* ===== Detail ===== */
+.detail-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.back-btn{
+  width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+}
+.back-btn svg{width:18px;height:18px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.d-head-main{flex:1;min-width:0}
+.d-head-main h2{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.d-head-main .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.d-actions{display:flex;gap:8px;flex-wrap:wrap}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:640px){.info-grid{grid-template-columns:1fr 1fr}}
+.info-cell{background:#f9fafb;border-radius:10px;padding:9px 11px}
+.info-cell .k{font-size:11.5px;color:var(--muted)}
+.info-cell .v{font-size:14px;font-weight:600;margin-top:1px;word-break:break-all}
+
+/* timeline */
+.timeline{position:relative;padding-left:22px}
+.timeline:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:10px}
+.tl-item:before{
+  content:"";position:absolute;left:-20px;top:16px;width:10px;height:10px;border-radius:50%;
+  background:#fff;border:3px solid var(--primary);
+}
+.tl-item.done:before{border-color:var(--ok);background:var(--ok)}
+.tl-item.overdue:before{border-color:var(--danger)}
+.tl-item.skip:before{border-color:#9ca3af;background:#9ca3af}
+.tl-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow)}
+.tl-card.overdue{border-color:#fecaca;background:var(--danger-bg)}
+.tl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tl-stage{font-weight:700;font-size:14.5px}
+.tl-date{font-size:12.5px;color:var(--muted)}
+.tl-content{font-size:13.5px;color:#374151;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.tl-record{font-size:13px;background:var(--ok-bg);border-radius:8px;padding:7px 10px;margin-top:7px;color:#166534}
+.tl-record .r-lbl{font-weight:700;font-size:11.5px}
+.tl-actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.tl-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:18px 0}
+
+/* record list */
+.rec-item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;box-shadow:var(--shadow)}
+.rec-item .r-top{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.rec-item .r-top .d{font-weight:700;color:var(--text)}
+.rec-item .r-content{font-size:13.5px;margin-top:5px}
+.rec-item .r-result{font-size:13.5px;margin-top:3px;color:#374151;background:#f9fafb;border-radius:8px;padding:7px 10px}
+
+/* ===== Templates ===== */
+.tpl-group{margin-bottom:16px}
+.tpl-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:8px;box-shadow:var(--shadow)}
+.tpl-card .t-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tpl-name{font-weight:700;font-size:14.5px}
+.tpl-meta{font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tpl-meta .m{background:#f3f4f6;padding:1px 7px;border-radius:5px}
+.tpl-content{font-size:13.5px;color:#374151;margin-top:6px;white-space:pre-wrap;word-break:break-word;background:#f9fafb;border-radius:8px;padding:8px 10px}
+.tpl-actions{margin-top:8px;display:flex;gap:8px}
+
+/* ===== Modal ===== */
+.mask{
+  position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:100;display:none;align-items:flex-end;justify-content:center;
+}
+.mask.show{display:flex}
+@media(min-width:640px){.mask{align-items:center;padding:20px}}
+.modal{
+  background:#fff;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;
+  animation:slideUp .22s ease;padding:18px 16px 20px;
+}
+@media(min-width:640px){.modal{border-radius:18px;animation:fadeUp .18s ease}}
+@keyframes slideUp{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(12px);opacity:.5}to{transform:none;opacity:1}}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal h3 svg{width:19px;height:19px;stroke:var(--primary);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px}
+.form-row label .req{color:var(--danger)}
+.form-row input[type=text],.form-row input[type=tel],.form-row input[type=number],.form-row input[type=date],.form-row select,.form-row textarea{
+  width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 11px;outline:none;background:#fff;
+}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.form-row textarea{min-height:76px;resize:vertical}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr}}
+.form-check{display:flex;align-items:center;gap:8px;font-size:14px;color:#374151;margin:4px 0 12px}
+.form-check input{width:18px;height:18px;accent-color:var(--primary)}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.tpl-pick{width:100%;border:1px dashed var(--border);border-radius:10px;padding:8px 10px;margin-top:6px;background:#f9fafb}
+.tpl-pick .pick-btn{font-size:12.5px;color:var(--primary);background:var(--primary-weak);padding:4px 10px;border-radius:7px;font-weight:600}
+.task-preview{
+  background:var(--primary-weak);border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:12px;
+}
+.task-preview .tp-title{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.task-preview .tp-content{font-size:13.5px;color:#1e40af;margin-top:7px;white-space:pre-wrap;word-break:break-word}
+.task-preview .tp-meta{font-size:12px;color:#1d4ed8;margin-top:5px;font-weight:600}
+
+/* ===== Toast ===== */
+#toast{
+  position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);z-index:200;
+  background:#111827;color:#fff;font-size:13.5px;padding:9px 18px;border-radius:999px;opacity:0;
+  pointer-events:none;transition:all .25s;max-width:86vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.warn{background:var(--warn)}
+
+/* ===== Empty ===== */
+.empty{text-align:center;padding:36px 16px;color:var(--muted)}
+.empty svg{width:52px;height:52px;stroke:#cbd5e1;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:10px}
+.empty p{font-size:14px}
+
+/* ===== Mobile tabbar ===== */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--border);
+  display:none;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+}
+@media(max-width:768px){.tabbar{display:flex}}
+.tab-btn{
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 14px;border-radius:10px;
+  color:var(--muted);font-size:11px;min-width:64px;
+}
+.tab-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tab-btn.active{color:var(--primary);font-weight:700}
+.tab-btn .t-cnt{background:var(--danger);color:#fff;font-size:10px;border-radius:999px;padding:0 5px;min-width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;margin-top:-2px}
+@media(min-width:769px){main{padding-bottom:30px}}
+
+@media(max-width:480px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .nav-btn{flex:1;justify-content:center;padding:11px 4px}
+  .h-title p{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- 模式提示条 -->
+<div class="mode-banner" id="modeBanner" style="display:none">
+  <div class="mode-banner-inner">
+    <span class="mb-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+    <span class="mb-text"><b>当前为本地保存模式</b> · 数据保存在本设备浏览器中。建议定期「导出备份」防丢失。如需多设备实时同步，<a onclick="showCloudTip()">了解云端模式</a>。</span>
+    <button class="mb-close" onclick="dismissBanner()" aria-label="关闭">×</button>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+    </div>
+    <div class="h-title">
+      <h1>骨科随访工作台</h1>
+      <p id="headerSub">本地保存模式（单设备）</p>
+    </div>
+    <div class="sync-badge" id="syncBadge"><span class="dot"></span><span id="syncText">同步中</span></div>
+    <button class="sync-btn" onclick="openSyncSettings()" title="同步设置（GitHub 云端）" aria-label="同步设置">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <button class="nav-btn active" data-view="today" onclick="switchView('today')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14l1.5 1.5L16 13"/></svg>
+      今日要处理 <span class="cnt" id="navTodayCnt">0</span>
+    </button>
+    <button class="nav-btn" data-view="inpatient" onclick="switchView('inpatient')">
+      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+      板块一 · 住院管理
+    </button>
+    <button class="nav-btn" data-view="outpatient" onclick="switchView('outpatient')">
+      <svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/><path d="M10 16h4"/></svg>
+      板块二 · 出院随访
+    </button>
+    <button class="nav-btn" data-view="templates" onclick="switchView('templates')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      模板库
+    </button>
+    <div class="grow"></div>
+  </div>
+</nav>
+
+<main>
+  <!-- ===== 今日视图 ===== -->
+  <section class="view active" id="view-today">
+    <div class="stats">
+      <div class="stat primary"><div class="num" id="stIn" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4">0</div><div class="lbl">住院中</div></div>
+      <div class="stat"><div class="num" id="stFu" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4">0</div><div class="lbl">随访中</div></div>
+      <div class="stat primary"><div class="num" id="stToday" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9">0</div><div class="lbl">今日到期</div></div>
+      <div class="stat danger"><div class="num" id="stOver" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9">0</div><div class="lbl">已逾期</div></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" onclick="openAddPatientModal()">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        新增患者
+      </button>
+      <button class="btn ghost sm" onclick="exportData()">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+        导出备份
+      </button>
+      <button class="btn ghost sm" onclick="document.getElementById('importFile').click()">
+        <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>
+        导入恢复
+      </button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+
+    <h2 class="sec-title">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h8M8 18h5"/></svg>
+      今天要处理
+    </h2>
+    <div id="todayList"></div>
+  </section>
+
+  <!-- ===== 板块一 · 住院管理 ===== -->
+  <section class="view" id="view-inpatient">
+    <div class="toolbar">
+      <div class="search-box grow">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="inSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderInpatient()">
+      </div>
+      <button class="btn" onclick="openAddPatientModal()">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>入院登记</span>
+      </button>
+    </div>
+    <div class="card card-pad" style="background:var(--primary-weak);border:1px solid #bfdbfe;font-size:13px;color:#1e40af;margin-bottom:12px">
+      板块一 · 住院管理：当前在院的患者（手术/非手术均可）。完成治疗后点击「办理出院」→ 手术患者按手术日、非手术患者按出院日自动生成随访计划并进入板块二。
+    </div>
+    <div id="inpatientGrid" class="patient-grid"></div>
+    <div class="card card-pad" style="margin-top:12px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap">
+        <span>演示数据说明：页面预置了脱敏示例患者与常用随访模板，可一键清空。</span>
+        <button class="btn danger sm" onclick="clearDemoData()">清空示例数据</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 板块二 · 出院随访 ===== -->
+  <section class="view" id="view-outpatient">
+    <div class="toolbar">
+      <div class="search-box grow">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="outSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderOutpatient()">
+      </div>
+      <button class="btn ghost sm" onclick="exportData()">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+        导出备份
+      </button>
+    </div>
+    <div class="chips" id="outChips" style="margin-bottom:12px"></div>
+    <div id="outpatientGrid" class="patient-grid"></div>
+  </section>
+
+  <!-- ===== 模板视图 ===== -->
+  <section class="view" id="view-templates">
+    <div class="toolbar">
+      <button class="btn" onclick="openTemplateModal('住院提醒')">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        新增住院提醒模板
+      </button>
+      <button class="btn ghost" onclick="openTemplateModal('随访节点')">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        新增随访节点模板
+      </button>
+      <button class="btn ghost" onclick="openTemplateModal('随访内容')">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        新增随访内容模板
+      </button>
+    </div>
+    <div id="tplList"></div>
+    <div class="card card-pad" style="font-size:13px;color:var(--muted)">
+      <b>使用说明：</b>「住院提醒」在新增患者时自动按入院日生成；「随访节点」在办理出院时生成——手术患者用「手术日」基准模板、非手术患者用「出院日」基准模板；「随访内容」在处理随访时可一键填入记录。节点日期 = 基准日期 + 偏移天数。
+    </div>
+  </section>
+
+  <!-- ===== 患者详情（覆盖视图，板块一/二共用） ===== -->
+  <div id="patientDetail" style="display:none"></div>
+</main>
+
+<!-- 移动端底部导航 -->
+<div class="tabbar">
+  <button class="tab-btn active" data-view="today" onclick="switchView('today')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h8M8 18h5"/></svg>
+    今日 <span class="t-cnt" id="tabTodayCnt" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" data-view="inpatient" onclick="switchView('inpatient')">
+    <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+    住院
+  </button>
+  <button class="tab-btn" data-view="outpatient" onclick="switchView('outpatient')">
+    <svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/><path d="M10 16h4"/></svg>
+    随访
+  </button>
+  <button class="tab-btn" data-view="templates" onclick="switchView('templates')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    模板
+  </button>
+</div>
+
+<!-- 弹窗 -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== 全局错误捕获（便于排查线上问题） ===== */
+window.addEventListener('error', function(ev){
+  try {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;padding:8px 10px;white-space:pre-wrap;font-family:monospace';
+    d.textContent = '[JS错误] ' + (ev.message || 'unknown') + ' @line ' + (ev.lineno || '');
+    document.body.appendChild(d);
+  } catch(e){}
+});
+window.addEventListener('unhandledrejection', function(ev){
+  try {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;bottom:40px;left:0;right:0;z-index:9999;background:#d97706;color:#fff;font-size:12px;padding:8px 10px;white-space:pre-wrap;font-family:monospace';
+    d.textContent = '[异步错误] ' + ((ev.reason && (ev.reason.message || ev.reason)) || 'unknown');
+    document.body.appendChild(d);
+  } catch(e){}
+});
+
+/* ================= 配置 ================= */
+var DB = {
+  patients: 'NpdwBCFJNCky6xIwPU9dO4',
+  tasks: 'VQMCWHtaiuLnKl9W4qt1l9',
+  records: 'dWbvLBY2kKYdspjJLuwHyc',
+  templates: 'v6r7dr3xO7ZxAEEn0aIXb6'
+};
+var PREFIX = 'wb_ortho_';
+var CACHE_KEY = PREFIX + 'cache';
+var PENDING_KEY = PREFIX + 'pending';
+/* 云端同步后端：GitHub 私有仓库（方案②）
+   数据存于仓库内 data.json，通过 GitHub Contents API 读写；手机/电脑打开同一网址并登录同一账号即可实时共享。
+   cloudMode 在初始化时根据 GitHub 配置是否就绪(ghOk)决定。资料库 SDK 通道已弃用。 */
+var hasSDK = false;
+var db = null;
+var cloudMode = false;
+
+var state = {
+  view: 'today',
+  patients: [], tasks: [], records: [], templates: [],
+  statusFilter: '全部',
+  outFilter: '全部',
+  selectedPatientId: null,
+  today: todayStr()
+};
+var SCHEMA_OPTS = {}; // {tableKey: {fields:{name:type}, selects:{name:{textToId:{}}}}}
+
+/* ================= 工具 ================= */
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+function todayStr(){ var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function parseDate(s){ var p = String(s||'').split('T')[0].split('-'); return new Date(+p[0], (+p[1]||1)-1, +(p[2]||1)); }
+function addDays(s, n){ var d = parseDate(s); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function daysBetween(a, b){ return Math.round((parseDate(a) - parseDate(b)) / 86400000); }
+function fmtDate(s){ return String(s||'').split('T')[0]; }
+function escapeHtml(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function taskIcon(type){
+  if (type === '用药提醒') return '<svg viewBox="0 0 24 24"><path d="M10.5 20.5a4.5 4.5 0 010-9l6-6a3.2 3.2 0 014.5 4.5l-6 6a4.5 4.5 0 01-4.5 4.5z"/><path d="M7.5 12.5L12 8"/></svg>';
+  if (type === '康复提醒') return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M19.1 4.9l-2.8 2.8M7.7 16.3l-2.8 2.8"/></svg>';
+  if (type === '复查提醒') return '<svg viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  return '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15h6M9 12h3"/></svg>';
+}
+function taskIcoClass(type){
+  if (type === '用药提醒') return 'drug';
+  if (type === '康复提醒') return 'rehab';
+  if (type === '复查提醒') return 'check';
+  return 'note';
+}
+function taskTypeBadge(type){
+  var cls = type === '用药提醒' ? 'b-wait' : (type === '康复提醒' ? 'b-done' : (type === '复查提醒' ? '' : 'b-skip'));
+  var extra = type === '复查提醒' ? ' style="background:#f5f3ff;color:#7c3aed"' : '';
+  return '<span class="badge ' + cls + '"' + extra + '>' + escapeHtml(type || '其他备注') + '</span>';
+}
+function statusBadge(s){
+  if (s === '已完成') return '<span class="badge b-done">已完成</span>';
+  if (s === '已跳过') return '<span class="badge b-skip">已跳过</span>';
+  return '<span class="badge b-wait">待处理</span>';
+}
+function patientStatusTag(s){
+  if (s === '住院中') return '<span class="status-tag st-in">住院中</span>';
+  if (s === '随访中') return '<span class="status-tag st-fu">随访中</span>';
+  return '<span class="status-tag st-done">已结案</span>';
+}
+
+/* ================= 缓存层 ================= */
+function loadCache(){
+  try { var c = JSON.parse(localStorage.getItem(CACHE_KEY)); return c && typeof c === 'object' ? c : {}; }
+  catch(e){ return {}; }
+}
+function saveCache(c){
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch(e){}
+}
+function loadPending(){
+  try { var p = JSON.parse(localStorage.getItem(PENDING_KEY)); return Object.prototype.toString.call(p) === '[object Array]' ? p : []; }
+  catch(e){ return []; }
+}
+function savePending(p){ try { localStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch(e){} }
+function getCacheTable(key){
+  var c = loadCache();
+  if (!c[key]) { c[key] = []; saveCache(c); }
+  return c[key];
+}
+function cacheUpsert(key, row){
+  var c = loadCache();
+  var arr = c[key] || (c[key] = []);
+  var found = false;
+  for (var i = 0; i < arr.length; i++){ if (arr[i]._id === row._id){ arr[i] = row; found = true; break; } }
+  if (!found) arr.push(row);
+  saveCache(c);
+}
+function cacheRemove(key, id){
+  var c = loadCache();
+  if (!c[key]) return;
+  var arr = [];
+  for (var i = 0; i < c[key].length; i++){ if (c[key][i]._id !== id) arr.push(c[key][i]); }
+  c[key] = arr;
+  saveCache(c);
+}
+function getLocalState(){
+  var c = loadCache();
+  return {
+    patients: c.patients || [],
+    tasks: c.tasks || [],
+    records: c.records || [],
+    templates: c.templates || []
+  };
+}
+
+/* ================= API 封装（云端优先 + 本地兜底 + 离线队列） ================= */
+function toProps(tableKey, obj){
+  var props = {};
+  var meta = SCHEMA_OPTS[tableKey] || {};
+  var fields = meta.fields || {};
+  var selects = meta.selects || {};
+  for (var k in obj){
+    if (!obj.hasOwnProperty(k) || k === '_id' || k === '_synced') continue;
+    var v = obj[k];
+    if (v === null || v === undefined || v === '') continue;
+    var type = fields[k] || 'text';
+    if (type === 'number'){
+      var n = Number(v);
+      if (isNaN(n)) continue;
+      props[k] = { number: n };
+    } else if (type === 'date'){
+      props[k] = { date: String(v).slice(0, 10) };
+    } else if (type === 'select'){
+      var tm = selects[k] && selects[k].textToId;
+      props[k] = { select: (tm && tm[v]) ? tm[v] : String(v) };
+    } else if (type === 'phone_number'){
+      props[k] = { phone_number: String(v) };
+    } else {
+      props[k] = { text: String(v) };
+    }
+  }
+  return props;
+}
+function withTimeout(p, ms){
+  return new Promise(function(resolve, reject){
+    var done = false;
+    var timer = setTimeout(function(){
+      if (!done){ done = true; reject(new Error('request timeout')); }
+    }, ms || 8000);
+    p.then(function(v){
+      if (!done){ done = true; clearTimeout(timer); resolve(v); }
+    }).catch(function(e){
+      if (!done){ done = true; clearTimeout(timer); reject(e); }
+    });
+  });
+}
+function afterQuery(key, res){
+  var rows = (res && res.results) || [];
+  rows.forEach(function(r){ r._id = r._id || r.record_id || uid(); r._synced = true; });
+  getCacheTable(key);
+  var c = loadCache(); c[key] = rows; saveCache(c);
+  return rows;
+}
+function apiQueryAll(tableKey){
+  return new Promise(function(resolve){ resolve(getCacheTable(tableKey)); });
+}
+function addRecordPromise(tableKey, row){
+  if (tableKey === 'patients') return db.addRecord({ databaseId: 'NpdwBCFJNCky6xIwPU9dO4', properties: toProps(tableKey, row) });
+  if (tableKey === 'tasks') return db.addRecord({ databaseId: 'VQMCWHtaiuLnKl9W4qt1l9', properties: toProps(tableKey, row) });
+  if (tableKey === 'records') return db.addRecord({ databaseId: 'dWbvLBY2kKYdspjJLuwHyc', properties: toProps(tableKey, row) });
+  return db.addRecord({ databaseId: 'v6r7dr3xO7ZxAEEn0aIXb6', properties: toProps(tableKey, row) });
+}
+function updateRecordPromise(tableKey, id, patch){
+  if (tableKey === 'patients') return db.updateRecord({ databaseId: 'NpdwBCFJNCky6xIwPU9dO4', recordId: id, properties: toProps(tableKey, patch) });
+  if (tableKey === 'tasks') return db.updateRecord({ databaseId: 'VQMCWHtaiuLnKl9W4qt1l9', recordId: id, properties: toProps(tableKey, patch) });
+  if (tableKey === 'records') return db.updateRecord({ databaseId: 'dWbvLBY2kKYdspjJLuwHyc', recordId: id, properties: toProps(tableKey, patch) });
+  return db.updateRecord({ databaseId: 'v6r7dr3xO7ZxAEEn0aIXb6', recordId: id, properties: toProps(tableKey, patch) });
+}
+function deleteRecordPromise(tableKey, id){
+  if (tableKey === 'patients') return db.deleteRecord({ databaseId: 'NpdwBCFJNCky6xIwPU9dO4', recordId: id });
+  if (tableKey === 'tasks') return db.deleteRecord({ databaseId: 'VQMCWHtaiuLnKl9W4qt1l9', recordId: id });
+  if (tableKey === 'records') return db.deleteRecord({ databaseId: 'dWbvLBY2kKYdspjJLuwHyc', recordId: id });
+  return db.deleteRecord({ databaseId: 'v6r7dr3xO7ZxAEEn0aIXb6', recordId: id });
+}
+function apiAdd(tableKey, obj){
+  var row = {};
+  for (var k in obj){ if (obj.hasOwnProperty(k)) row[k] = obj[k]; }
+  row._id = row._id || uid();
+  row._ts = Date.now();
+  row._synced = false;
+  cacheUpsert(tableKey, row);
+  if (cloudMode) schedulePush();
+  return new Promise(function(resolve){ resolve(row._id); });
+}
+function apiUpdate(tableKey, id, patch){
+  var c = loadCache();
+  var arr = c[tableKey] || [];
+  var row = null;
+  for (var i = 0; i < arr.length; i++){ if (arr[i]._id === id){ row = arr[i]; break; } }
+  if (!row) { row = { _id: id }; arr.push(row); }
+  for (var k in patch){ if (patch.hasOwnProperty(k)) row[k] = patch[k]; }
+  row._ts = Date.now();
+  row._synced = false;
+  cacheUpsert(tableKey, row);
+  if (cloudMode) schedulePush();
+  return new Promise(function(resolve){ resolve(true); });
+}
+function apiRemove(tableKey, id){
+  cacheRemove(tableKey, id);
+  if (cloudMode) schedulePush();
+  return new Promise(function(resolve){ resolve(true); });
+}
+function enqueue(op){
+  var p = loadPending(); p.push(op); savePending(p);
+  setSyncBadge('pending');
+}
+var _flushing = false;
+function flushPending(){
+  if (!cloudMode || !hasSDK) return;
+  var p = loadPending();
+  if (!p.length) return;
+  _flushing = true;
+  var rest = [];
+  var idMap = {};
+  var chain = Promise.resolve();
+  p.forEach(function(op){
+    chain = chain.then(function(){
+      if (op.action === 'add'){
+        var data = {};
+        for (var k in op.data){ if (op.data.hasOwnProperty(k)) data[k] = op.data[k]; }
+        if (data['患者ID'] && idMap[data['患者ID']]) data['患者ID'] = idMap[data['患者ID']];
+        return apiAdd(op.table, data).then(function(rid){
+          var oldId = op.data._id || op.localId;
+          if (oldId) idMap[oldId] = rid;
+          var c = loadCache(); var arr = c[op.table] || [];
+          for (var i = 0; i < arr.length; i++){
+            if (arr[i]._id === oldId){ arr[i]._id = rid; arr[i]._synced = true; break; }
+          }
+          saveCache(c);
+        });
+      }
+      if (op.action === 'update'){ return apiUpdate(op.table, op.remoteId, op.patch); }
+      if (op.action === 'remove'){ return apiRemove(op.table, op.remoteId); }
+      return Promise.resolve();
+    }).catch(function(){ rest.push(op); });
+  });
+  chain.then(function(){
+    _flushing = false;
+    savePending(rest);
+    if (rest.length){ setSyncBadge('pending'); }
+    else { setSyncBadge('ok'); toast('离线数据已同步到云端'); }
+  });
+}
+
+/* ================= GitHub 云端同步（方案②：私有仓库 data.json） ================= */
+var GH_PREFIX = PREFIX + 'gh_';
+/* 部署后预填的非机密默认值（用户名/仓库/分支/路径），用户只需在 ⚙ 里粘贴令牌 */
+var DEFAULT_SYNC = { owner: 'HoboLee333', repo: 'ortho-data', branch: 'main', path: 'ortho-followup.json' };
+function ghConfig(){
+  try { var s = localStorage.getItem(GH_PREFIX + 'cfg'); return s ? JSON.parse(s) : null; } catch(e){ return null; }
+}
+function ghSaveConfig(cfg){ try { localStorage.setItem(GH_PREFIX + 'cfg', JSON.stringify(cfg)); } catch(e){} }
+function ghOk(){ var c = ghConfig(); return !!(c && c.owner && c.repo && c.token); }
+function ghFilePath(){ var c = ghConfig(); return (c.path || 'ortho-followup.json').replace(/^\/+/, ''); }
+function ghBranch(){ var c = ghConfig(); return c.branch || 'main'; }
+function ghHeaders(){ return { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + ghConfig().token }; }
+function ghApi(path, opts){
+  opts = opts || {};
+  var headers = ghHeaders();
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  return fetch('https://api.github.com' + path, { method: opts.method || 'GET', headers: headers, body: opts.body })
+    .then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error('GitHub ' + r.status + '：' + t.slice(0,160)); });
+      var ct = r.headers.get('content-type') || '';
+      return ct.indexOf('application/json') >= 0 ? r.json() : null;
+    });
+}
+function ghPullRaw(){
+  var c = ghConfig();
+  return ghApi('/repos/' + c.owner + '/' + c.repo + '/contents/' + encodeURIComponent(ghFilePath()) + '?ref=' + encodeURIComponent(ghBranch()))
+    .then(function(res){
+      if (!res) return { data: null, sha: null };
+      var content = res.content ? atob(res.content.replace(/\s/g, '')) : '';
+      var data = content ? JSON.parse(content) : null;
+      return { data: data, sha: res.sha };
+    })
+    .catch(function(e){
+      if (e.message && e.message.indexOf('404') >= 0) return { data: null, sha: null };
+      throw e;
+    });
+}
+/* 合并本地与远程：按 _id 取较新(_ts 大者优先)，实现多设备增量合并 */
+function mergedState(local, remote){
+  var out = {};
+  ['patients','tasks','records','templates'].forEach(function(k){
+    var map = {};
+    (remote && remote[k] ? remote[k] : []).forEach(function(r){ if (r && r._id) map[r._id] = r; });
+    (local && local[k] ? local[k] : []).forEach(function(r){
+      if (!r || !r._id) return;
+      var rem = map[r._id];
+      if (!rem) map[r._id] = r;
+      else map[r._id] = ((r._ts || 0) >= (rem._ts || 0)) ? r : rem;
+    });
+    out[k] = Object.keys(map).map(function(id){ return map[id]; });
+  });
+  return out;
+}
+function ghApplyMerged(merged){
+  var c = loadCache();
+  c.patients = merged.patients; c.tasks = merged.tasks; c.records = merged.records; c.templates = merged.templates;
+  saveCache(c);
+}
+var _pushTimer = null;
+function schedulePush(){
+  if (!cloudMode) return;
+  if (_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function(){ ghPush(); }, 1500);
+}
+function ghPush(){
+  if (!ghOk()) return Promise.resolve();
+  setSyncBadge('syncing');
+  var attempt = function(){
+    return ghPullRaw().then(function(remote){
+      var merged = mergedState(getLocalState(), remote.data);
+      ghApplyMerged(merged);
+      var content = btoa(unescape(encodeURIComponent(JSON.stringify(merged, null, 2))));
+      return ghApi('/repos/' + ghConfig().owner + '/' + ghConfig().repo + '/contents/' + encodeURIComponent(ghFilePath()), {
+        method: 'PUT',
+        body: JSON.stringify({ message: 'ortho-followup sync ' + new Date().toISOString(), content: content, sha: remote.sha || undefined, branch: ghBranch() })
+      }).then(function(){ setSyncBadge('ok'); }).catch(function(e){
+        if (e.message && e.message.indexOf('409') >= 0) return attempt();
+        throw e;
+      });
+    });
+  };
+  return attempt().catch(function(e){
+    setSyncBadge('error');
+    toast('同步失败：' + (e.message || e), true);
+  });
+}
+function ghPull(){
+  if (!ghOk()) return Promise.resolve();
+  setSyncBadge('syncing');
+  return ghPullRaw().then(function(remote){
+    if (remote.data) ghApplyMerged(mergedState(getLocalState(), remote.data));
+    setSyncBadge('ok');
+  }).catch(function(e){
+    setSyncBadge('error');
+    toast('拉取失败：' + (e.message || e), true);
+  });
+}
+
+/* ================= 表单本地缓存（防误关丢内容） ================= */
+function debounce(fn, ms){
+  var t;
+  return function(){ clearTimeout(t); t = setTimeout(fn, ms); };
+}
+var _formKey = null;
+function bindFormCache(key){
+  _formKey = key;
+  var box = document.getElementById('modalBox');
+  var els = box.querySelectorAll('input,select,textarea');
+  if (!els.length) return;
+  var save = function(){
+    try {
+      var d = {};
+      for (var i = 0; i < els.length; i++){ if (els[i].id) d[els[i].id] = els[i].value; }
+      localStorage.setItem(PREFIX + 'form_' + key, JSON.stringify(d));
+    } catch(e){}
+  };
+  for (var i = 0; i < els.length; i++){
+    els[i].addEventListener('input', debounce(save, 300));
+    els[i].addEventListener('change', save);
+  }
+  try {
+    var s = localStorage.getItem(PREFIX + 'form_' + key);
+    if (s){
+      var d = JSON.parse(s);
+      for (var j = 0; j < els.length; j++){
+        var el = els[j];
+        if (d[el.id] !== undefined && d[el.id] !== '') el.value = d[el.id];
+      }
+    }
+  } catch(e){}
+}
+function clearFormCache(){
+  if (!_formKey) return;
+  try { localStorage.removeItem(PREFIX + 'form_' + _formKey); } catch(e){}
+  _formKey = null;
+}
+
+/* ================= 同步状态 ================= */
+function setSyncBadge(mode){
+  var el = document.getElementById('syncBadge');
+  var tx = document.getElementById('syncText');
+  if (!el || !tx) return;
+  if (mode === 'off'){ el.className = 'sync-badge off'; tx.textContent = '离线模式'; }
+  else if (mode === 'pending'){ el.className = 'sync-badge off'; tx.textContent = '待同步'; }
+  else if (mode === 'local'){ el.className = 'sync-badge local'; tx.textContent = '本地模式'; }
+  else if (mode === 'syncing'){ el.className = 'sync-badge off'; tx.textContent = '同步中…'; }
+  else if (mode === 'error'){ el.className = 'sync-badge off'; tx.textContent = '同步失败'; }
+  else { el.className = 'sync-badge'; tx.textContent = '已同步云端'; }
+}
+function toast(msg, warn){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = warn ? 'show warn' : 'show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.className = ''; }, 2200);
+}
+
+/* ================= 数据加载 ================= */
+function refreshAll(){
+  var tasks = [
+    apiQueryAll('patients'),
+    apiQueryAll('tasks'),
+    apiQueryAll('records'),
+    apiQueryAll('templates')
+  ];
+  return Promise.all(tasks).then(function(res){
+    state.patients = res[0]; state.tasks = res[1]; state.records = res[2]; state.templates = res[3];
+    setSyncBadge(cloudMode ? 'ok' : 'local');
+    renderAll();
+  }).catch(function(){
+    var c = getLocalState();
+    state.patients = c.patients; state.tasks = c.tasks; state.records = c.records; state.templates = c.templates;
+    renderAll();
+  });
+}
+
+/* ================= 今日任务计算 ================= */
+function todayTasks(){
+  var today = state.today;
+  var overdue = [], due = [], soon = [];
+  state.tasks.forEach(function(t){
+    if (t['状态'] !== '待处理') return;
+    var d = fmtDate(t['计划日期']);
+    var p = findPatient(t['患者ID'], t['患者姓名']);
+    if (p && p['状态'] === '已结案') return;
+    var item = { task: t, patient: p, date: d };
+    var diff = daysBetween(today, d);
+    if (diff > 0) overdue.push(item);
+    else if (diff === 0) due.push(item);
+    else if (diff >= -3) soon.push(item);
+  });
+  overdue.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+  due.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+  return { overdue: overdue, due: due, soon: soon };
+}
+function findPatient(id, name){
+  for (var i = 0; i < state.patients.length; i++){
+    if (state.patients[i]._id === id) return state.patients[i];
+  }
+  if (name){
+    for (var j = 0; j < state.patients.length; j++){
+      if (state.patients[j]['姓名'] === name) return state.patients[j];
+    }
+  }
+  return null;
+}
+function patientTasks(patientId, type){
+  return state.tasks.filter(function(t){
+    if (t['患者ID'] !== patientId) return false;
+    if (type && t['类型'] !== type) return false;
+    return true;
+  }).sort(function(a,b){ return fmtDate(a['计划日期']) < fmtDate(b['计划日期']) ? -1 : 1; });
+}
+function postopDay(p){
+  if (p['手术日期']) return daysBetween(state.today, fmtDate(p['手术日期']));
+  if (p['出院日期']) return daysBetween(state.today, fmtDate(p['出院日期']));
+  return null;
+}
+function postLabel(p){
+  var d = postopDay(p);
+  if (d === null) return '';
+  if (p['手术日期']){
+    if (d === 0) return '今日手术';
+    return d < 0 ? '术前' : '术后第' + d + '天';
+  }
+  if (d === 0) return '今日出院';
+  return d < 0 ? '出院前' : '出院后第' + d + '天';
+}
+function isSurgical(p){ return !!(p['手术日期']); }
+
+/* ================= 渲染：今日 ================= */
+function renderAll(){
+  renderStats();
+  renderToday();
+  renderInpatient();
+  renderOutpatient();
+  renderDetail();
+  renderTemplates();
+  updateNavCnt();
+}
+function renderStats(){
+  var inN = 0, fuN = 0;
+  state.patients.forEach(function(p){
+    if (p['状态'] === '住院中') inN++;
+    else if (p['状态'] === '随访中') fuN++;
+  });
+  var tt = todayTasks();
+  document.getElementById('stIn').textContent = inN;
+  document.getElementById('stFu').textContent = fuN;
+  document.getElementById('stToday').textContent = tt.due.length;
+  document.getElementById('stOver').textContent = tt.overdue.length;
+}
+function renderToday(){
+  var el = document.getElementById('todayList');
+  var tt = todayTasks();
+  var html = '';
+  var today = state.today;
+
+  if (tt.overdue.length){
+    html += '<div class="today-group"><div class="g-title"><span class="tag tag-overdue">已逾期 ' + tt.overdue.length + ' 项</span></div>';
+    tt.overdue.forEach(function(it){ html += taskItemHtml(it, true); });
+    html += '</div>';
+  }
+  if (tt.due.length){
+    html += '<div class="today-group"><div class="g-title"><span class="tag tag-today">今日到期 ' + tt.due.length + ' 项</span></div>';
+    tt.due.forEach(function(it){ html += taskItemHtml(it, false); });
+    html += '</div>';
+  }
+  if (tt.soon.length){
+    html += '<div class="today-group"><div class="g-title"><span class="tag tag-soon">未来 3 天</span></div>';
+    tt.soon.forEach(function(it){ html += taskItemHtml(it, false); });
+    html += '</div>';
+  }
+  if (!html){
+    html = '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14l1.5 1.5L16 13"/></svg><p>今日无待办，全部随访任务已按时完成 🎉<br><span style="font-size:12.5px">新增患者或办理出院后，提醒会自动出现在这里</span></p></div>';
+  }
+  el.innerHTML = html;
+}
+function taskItemHtml(it, isOver){
+  var t = it.task, p = it.patient;
+  var name = p ? p['姓名'] : (t['患者姓名'] || '未知患者');
+  var diff = daysBetween(state.today, it.date);
+  var dayTxt = diff > 0 ? '逾期 ' + diff + ' 天' : (diff === 0 ? '今天' : '还有 ' + (-diff) + ' 天');
+  var cls = isOver ? 'task-item overdue' : 'task-item';
+  var html = '<div class="' + cls + '">';
+  html += '<div class="t-ico ' + taskIcoClass(t['事项类型']) + '">' + taskIcon(t['事项类型']) + '</div>';
+  html += '<div class="t-body">';
+  html += '<div class="t-top"><span class="t-name">' + escapeHtml(name) + '</span>' + taskTypeBadge(t['事项类型']) + statusBadge(t['状态']) + '</div>';
+  html += '<div class="t-stage">' + escapeHtml(t['阶段'] || '') + '</div>';
+  html += '<div class="t-meta"><span>📅 ' + escapeHtml(it.date) + '</span><span style="' + (isOver ? 'color:var(--danger);font-weight:700' : '') + '">' + dayTxt + '</span></div>';
+  if (t['内容']) html += '<div class="t-content">' + escapeHtml(t['内容']) + '</div>';
+  html += '<div class="t-actions">';
+  html += '<button class="btn ok sm" onclick="openTaskModal(\'' + t._id + '\')">处理</button>';
+  html += '<button class="btn ghost sm" onclick="skipTask(\'' + t._id + '\')">跳过</button>';
+  if (p) html += '<button class="btn ghost sm" onclick="openPatientDetail(\'' + p._id + '\')">查看患者</button>';
+  html += '</div></div></div>';
+  return html;
+}
+
+/* ================= 渲染：板块一（住院管理）+ 板块二（出院随访） ================= */
+function renderInpatient(){
+  var el = document.getElementById('inpatientGrid');
+  if (!el) return;
+  var kw = (document.getElementById('inSearch').value || '').trim().toLowerCase();
+  var list = state.patients.filter(function(p){
+    if (p['状态'] !== '住院中') return false;
+    if (kw){
+      var hay = ((p['姓名']||'') + ' ' + (p['住院号']||'') + ' ' + (p['诊断']||'') + ' ' + (p['术式']||'')).toLowerCase();
+      if (hay.indexOf(kw) < 0) return false;
+    }
+    return true;
+  });
+  list.sort(function(a,b){ return fmtDate(a['入院日期']) < fmtDate(b['入院日期']) ? 1 : -1; });
+  if (!list.length){
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg><p>暂无住院患者，点击右上角「入院登记」开始建档</p></div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function(p){ html += patientCardHtml(p, 'in'); });
+  el.innerHTML = html;
+}
+function renderOutpatient(){
+  var el = document.getElementById('outpatientGrid');
+  if (!el) return;
+  var kw = (document.getElementById('outSearch').value || '').trim().toLowerCase();
+  var list = state.patients.filter(function(p){
+    if (state.outFilter === '全部'){
+      if (p['状态'] !== '随访中' && p['状态'] !== '已结案') return false;
+    } else if (p['状态'] !== state.outFilter) return false;
+    if (kw){
+      var hay = ((p['姓名']||'') + ' ' + (p['住院号']||'') + ' ' + (p['诊断']||'') + ' ' + (p['术式']||'')).toLowerCase();
+      if (hay.indexOf(kw) < 0) return false;
+    }
+    return true;
+  });
+  list.sort(function(a,b){ return fmtDate(a['手术日期']||a['入院日期']) < fmtDate(b['手术日期']||b['入院日期']) ? 1 : -1; });
+
+  var chipsEl = document.getElementById('outChips');
+  var counts = { '全部': 0, '随访中': 0, '已结案': 0 };
+  state.patients.forEach(function(p){
+    if (p['状态'] === '随访中' || p['状态'] === '已结案') counts['全部']++;
+    if (counts[p['状态']] !== undefined) counts[p['状态']]++;
+  });
+  var ch = '';
+  ['全部','随访中','已结案'].forEach(function(s){
+    ch += '<button class="chip' + (state.outFilter === s ? ' active' : '') + '" onclick="setOutFilter(\'' + s + '\')">' + s + '<span class="cnt">' + (counts[s]||0) + '</span></button>';
+  });
+  chipsEl.innerHTML = ch;
+
+  if (!list.length){
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1"><svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/><path d="M10 16h4"/></svg><p>暂无随访患者。在「板块一 · 住院管理」点击「办理出院」后，患者会自动出现在这里</p></div>';
+    return;
+  }
+  var html = '';
+  list.forEach(function(p){ html += patientCardHtml(p, 'out'); });
+  el.innerHTML = html;
+}
+function setOutFilter(s){ state.outFilter = s; renderOutpatient(); }
+function patientCardHtml(p, mode){
+  var day = postopDay(p);
+  var dayTxt = postLabel(p);
+  var overCnt = patientTasks(p._id).filter(function(t){ return t['状态'] === '待处理' && daysBetween(state.today, fmtDate(t['计划日期'])) > 0; }).length;
+  var todo = patientTasks(p._id).filter(function(t){ return t['状态'] === '待处理'; });
+  var recs = state.records.filter(function(r){ return r['患者ID'] === p._id; });
+  var html = '<div class="p-card" onclick="openPatientDetail(\'' + p._id + '\')">';
+  html += '<div class="p-top"><div class="p-avatar">' + escapeHtml((p['姓名']||'?').slice(0,1)) + '</div>';
+  html += '<div style="flex:1;min-width:0"><div class="p-name">' + escapeHtml(p['姓名'] || '未命名') + patientStatusTag(p['状态']) + '</div>';
+  html += '<div class="p-sub">' + escapeHtml(p['住院号'] || '') + (p['诊断'] ? ' · ' + escapeHtml(p['诊断']) : '') + '</div></div>';
+  html += '<div class="p-day">' + escapeHtml(dayTxt) + '</div></div>';
+  html += '<div class="p-info"><span>入院 <b>' + escapeHtml(fmtDate(p['入院日期'])) + '</b></span>';
+  if (p['手术日期']) html += '<span>手术 <b>' + escapeHtml(fmtDate(p['手术日期'])) + '</b></span>';
+  if (p['出院日期']) html += '<span>出院 <b>' + escapeHtml(fmtDate(p['出院日期'])) + '</b></span>';
+  if (p['主治医师']) html += '<span>医师 <b>' + escapeHtml(p['主治医师']) + '</b></span>';
+  html += '</div>';
+  html += '<div class="p-foot">';
+  if (mode === 'in'){
+    var inTodo = patientTasks(p._id, '住院提醒').filter(function(t){ return t['状态'] === '待处理'; });
+    if (inTodo.length) html += '<span class="badge b-wait">住院待办 ' + inTodo.length + ' 项</span>';
+    else html += '<span class="badge b-done">住院提醒已全部处理</span>';
+    if (isSurgical(p)) html += '<span class="badge b-skip">' + (day >= 0 ? '已手术' : '待手术') + '</span>';
+    else html += '<span class="badge b-skip">保守治疗</span>';
+  } else {
+    if (todo.length) html += '<span class="badge b-wait">待办 ' + todo.length + ' 项</span>';
+    if (overCnt) html += '<span class="badge b-over">逾期 ' + overCnt + ' 项</span>';
+    html += '<span class="badge b-skip">随访 ' + recs.length + ' 次</span>';
+  }
+  html += '</div>';
+  if (mode === 'in' && p['状态'] === '住院中'){
+    html += '<div style="margin-top:10px;display:flex;gap:8px">';
+    html += '<button class="btn ok sm" style="flex:1" onclick="event.stopPropagation();dischargePatient(\'' + p._id + '\')">办理出院 → 进入板块二</button>';
+    html += '<button class="btn ghost sm" onclick="event.stopPropagation();openPatientDetail(\'' + p._id + '\')">查看详情</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ================= 渲染：详情 ================= */
+function renderDetail(){
+  if (!state.selectedPatientId) return;
+  var el = document.getElementById('patientDetail');
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === state.selectedPatientId){ p = state.patients[i]; break; } }
+  if (!p){ backToList(); return; }
+
+  var day = postopDay(p);
+  var dayTxt = postLabel(p) || '未登记日期';
+  var inTasks = patientTasks(p._id, '住院提醒');
+  var fuTasks = patientTasks(p._id, '随访节点');
+  var recs = state.records.filter(function(r){ return r['患者ID'] === p._id; }).sort(function(a,b){ return fmtDate(a['日期']) < fmtDate(b['日期']) ? 1 : -1; });
+
+  var html = '';
+  html += '<div class="detail-head"><button class="back-btn" onclick="backToList()"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></button>';
+  html += '<div class="d-head-main"><h2>' + escapeHtml(p['姓名'] || '未命名') + patientStatusTag(p['状态']) + '</h2>';
+  html += '<div class="sub">' + escapeHtml(p['诊断'] || '') + (p['术式'] ? ' · ' + escapeHtml(p['术式']) : '') + '</div></div>';
+  html += '<div class="d-actions">';
+  if (p['状态'] === '住院中'){
+    html += '<button class="btn ok sm" onclick="dischargePatient(\'' + p._id + '\')">办理出院 → 进入板块二</button>';
+  }
+  html += '<button class="btn ghost sm" onclick="openEditPatientModal(\'' + p._id + '\')">编辑</button>';
+  html += '<button class="btn ghost sm" onclick="openAddRecordModal(\'' + p._id + '\')">记随访</button>';
+  html += '<button class="btn danger sm" onclick="deletePatient(\'' + p._id + '\')">删除</button>';
+  html += '</div></div>';
+
+  html += '<div class="card card-pad">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">';
+  html += '<h2 class="sec-title" style="margin:0">基本信息</h2>';
+  html += '<span style="background:var(--primary-weak);color:var(--primary);font-weight:800;padding:6px 14px;border-radius:999px;font-size:14px">' + escapeHtml(dayTxt) + '</span>';
+  html += '</div>';
+  html += '<div class="info-grid">';
+  html += infoCell('性别', p['性别'] || '—');
+  html += infoCell('年龄', p['年龄'] ? p['年龄'] + ' 岁' : '—');
+  html += infoCell('住院号', p['住院号'] || '—');
+  html += infoCell('联系电话', p['联系电话'] || '—');
+  html += infoCell('入院日期', fmtDate(p['入院日期']) || '—');
+  html += infoCell('出院日期', fmtDate(p['出院日期']) || '—');
+  html += infoCell('手术日期', fmtDate(p['手术日期']) || '—');
+  html += infoCell('主治医师', p['主治医师'] || '—');
+  html += infoCell(isSurgical(p) ? '术后时长' : '出院后时长', day === null ? '—' : day + ' 天');
+  html += '</div>';
+  if (p['备注']) html += '<div style="margin-top:10px;background:#fffbeb;border-radius:10px;padding:9px 12px;font-size:13.5px">📝 ' + escapeHtml(p['备注']) + '</div>';
+  html += '</div>';
+
+  // 板块一：住院提醒
+  html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>板块一 · 住院期间提醒</h2>';
+  html += '<div class="timeline">';
+  if (inTasks.length){
+    inTasks.forEach(function(t){ html += tlItemHtml(t, p); });
+  } else {
+    html += '<div class="tl-empty">暂无住院提醒' + (p['状态'] === '住院中' ? '，可在模板库维护「住院提醒」模板后重新添加' : '（该患者已出院）') + '</div>';
+  }
+  html += '</div>';
+
+  // 板块二：随访计划
+  html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 15h6M12 12v6"/></svg>板块二 · 出院随访计划' + (fuTasks.length ? '（' + fuTasks.filter(function(t){return t['状态']==='待处理';}).length + ' 项待处理）' : '') + '</h2>';
+  html += '<div class="timeline">';
+  if (fuTasks.length){
+    fuTasks.forEach(function(t){ html += tlItemHtml(t, p); });
+  } else {
+    html += '<div class="tl-empty">' + (p['状态'] === '随访中' ? '无随访节点' : '尚未办理出院，点击上方「办理出院」自动生成常规随访节点（手术按手术日 / 非手术按出院日）') + '</div>';
+  }
+  html += '</div>';
+
+  // 随访记录
+  html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15h6M9 12h3"/></svg>随访记录</h2>';
+  if (recs.length){
+    recs.forEach(function(r){
+      html += '<div class="rec-item"><div class="r-top"><span class="badge ' + (r['类型'] === '随访' ? 'b-done' : 'b-wait') + '">' + escapeHtml(r['类型'] || '') + '</span><span class="d">' + escapeHtml(fmtDate(r['日期'])) + '</span>';
+      if (r['内容']) html += '<span>' + escapeHtml(r['内容']) + '</span>';
+      html += '</div>';
+      if (r['结果']) html += '<div class="r-result">' + escapeHtml(r['结果']) + '</div>';
+      html += '</div>';
+    });
+  } else {
+    html += '<div class="tl-empty">暂无随访记录</div>';
+  }
+
+  el.innerHTML = html;
+  el.style.display = 'block';
+  window.scrollTo(0, 0);
+}
+function infoCell(k, v){ return '<div class="info-cell"><div class="k">' + escapeHtml(k) + '</div><div class="v">' + escapeHtml(v) + '</div></div>'; }
+function tlItemHtml(t, p){
+  var cls = 'tl-item';
+  var cardCls = 'tl-card';
+  var d = fmtDate(t['计划日期']);
+  var diff = daysBetween(state.today, d);
+  if (t['状态'] === '待处理' && diff > 0){ cls += ' overdue'; cardCls += ' overdue'; }
+  else if (t['状态'] === '已完成') cls += ' done';
+  else if (t['状态'] === '已跳过') cls += ' skip';
+  var html = '<div class="' + cls + '"><div class="' + cardCls + '">';
+  html += '<div class="tl-top"><span class="tl-stage">' + escapeHtml(t['阶段'] || '未命名节点') + '</span>' + taskTypeBadge(t['事项类型']) + statusBadge(t['状态']) + '</div>';
+  html += '<div class="tl-date">📅 ' + escapeHtml(d) + (diff > 0 && t['状态'] === '待处理' ? ' <b style="color:var(--danger)">（逾期 ' + diff + ' 天）</b>' : (diff === 0 && t['状态'] === '待处理' ? ' <b style="color:var(--primary)">（今天）</b>' : '')) + '</div>';
+  if (t['内容']) html += '<div class="tl-content">' + escapeHtml(t['内容']) + '</div>';
+  if (t['状态'] === '已完成' && t['随访记录']){
+    html += '<div class="tl-record"><span class="r-lbl">随访结果：</span>' + escapeHtml(t['随访记录']) + (t['完成日期'] ? ' <span style="opacity:.7">（' + escapeHtml(fmtDate(t['完成日期'])) + '）</span>' : '') + '</div>';
+  }
+  if (t['状态'] === '待处理'){
+    html += '<div class="tl-actions"><button class="btn ok sm" onclick="openTaskModal(\'' + t._id + '\')">处理</button>';
+    html += '<button class="btn ghost sm" onclick="skipTask(\'' + t._id + '\')">跳过</button></div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+function backToList(){
+  state.selectedPatientId = null;
+  document.getElementById('patientDetail').style.display = 'none';
+  switchView(state.view);
+}
+function openPatientDetail(id){
+  state.selectedPatientId = id;
+  document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('patientDetail').style.display = 'block';
+  renderDetail();
+  window.scrollTo(0, 0);
+}
+
+/* ================= 渲染：模板 ================= */
+function renderTemplates(){
+  var el = document.getElementById('tplList');
+  var groups = [
+    { key: '住院提醒', desc: '新增患者时自动按入院日生成' },
+    { key: '随访节点', desc: '出院时生成：手术患者按手术日、非手术患者按出院日' },
+    { key: '随访内容', desc: '处理随访时一键填入记录' }
+  ];
+  var html = '';
+  groups.forEach(function(g){
+    var items = state.templates.filter(function(t){ return t['类别'] === g.key; })
+      .sort(function(a,b){ return (a['排序']||0) - (b['排序']||0); });
+    html += '<div class="tpl-group"><h2 class="sec-title">' + escapeHtml(g.key) + ' <span style="font-size:12px;font-weight:400;color:var(--muted)">' + escapeHtml(g.desc) + '</span></h2>';
+    if (!items.length){
+      html += '<div class="tl-empty">暂无「' + escapeHtml(g.key) + '」模板</div>';
+    }
+    items.forEach(function(t){
+      html += '<div class="tpl-card"><div class="t-top"><span class="tpl-name">' + escapeHtml(t['名称'] || '未命名') + '</span>' + (t['事项类型'] ? taskTypeBadge(t['事项类型']) : '') + '</div>';
+      if (t['基准'] || t['偏移天数'] !== null && t['偏移天数'] !== undefined){
+        var off = t['偏移天数'];
+        var offTxt = off === 0 ? '当天' : (off > 0 ? '+' + off + ' 天' : off + ' 天');
+        html += '<div class="tpl-meta"><span class="m">基准：' + escapeHtml(t['基准'] || '—') + '</span><span class="m">偏移：' + escapeHtml(offTxt) + '</span><span class="m">排序：' + (t['排序'] || 0) + '</span></div>';
+      }
+      if (t['内容']) html += '<div class="tpl-content">' + escapeHtml(t['内容']) + '</div>';
+      html += '<div class="tpl-actions"><button class="btn ghost sm" onclick="openTemplateModal(\'' + escapeHtml(g.key) + '\',\'' + t._id + '\')">编辑</button>';
+      html += '<button class="btn danger sm" onclick="deleteTemplate(\'' + t._id + '\',\'' + escapeHtml(g.key) + '\')">删除</button></div></div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ================= 视图切换 ================= */
+function switchView(v){
+  state.view = v;
+  document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('view-' + v).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(el){ el.classList.toggle('active', el.getAttribute('data-view') === v); });
+  document.querySelectorAll('.tab-btn').forEach(function(el){ el.classList.toggle('active', el.getAttribute('data-view') === v); });
+  if (v === 'today') renderToday();
+  if (v === 'inpatient') renderInpatient();
+  if (v === 'outpatient') renderOutpatient();
+  if (v === 'templates') renderTemplates();
+  window.scrollTo(0, 0);
+}
+function updateNavCnt(){
+  var tt = todayTasks();
+  var n = tt.overdue.length + tt.due.length;
+  var c1 = document.getElementById('navTodayCnt');
+  var c2 = document.getElementById('tabTodayCnt');
+  if (n > 0){ c1.textContent = n; c1.className = 'cnt'; c2.textContent = n; c2.style.display = 'inline-flex'; }
+  else { c1.className = 'cnt zero'; c2.style.display = 'none'; }
+}
+
+/* ================= 弹窗 ================= */
+function openModal(title, bodyHtml, footHtml){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>' + title + '</h3>' + bodyHtml + (footHtml ? '<div class="modal-foot">' + footHtml + '</div>' : '');
+  document.getElementById('mask').classList.add('show');
+}
+function closeModal(){ document.getElementById('mask').classList.remove('show'); }
+
+/* ================= 患者新增/编辑 ================= */
+function patientFormHtml(p){
+  p = p || {};
+  var hasSurgery = !!fmtDate(p['手术日期']);
+  return '' +
+  '<div class="form-grid">' +
+  '<div class="form-row"><label>姓名 <span class="req">*</span></label><input type="text" id="fName" value="' + escapeHtml(p['姓名']||'') + '" placeholder="患者姓名"></div>' +
+  '<div class="form-row"><label>性别</label><select id="fSex"><option value="">请选择</option><option value="男"' + (p['性别']==='男'?' selected':'') + '>男</option><option value="女"' + (p['性别']==='女'?' selected':'') + '>女</option></select></div>' +
+  '<div class="form-row"><label>年龄（岁）</label><input type="number" id="fAge" value="' + (p['年龄']!==undefined&&p['年龄']!==null?p['年龄']:'') + '" placeholder="如 65"></div>' +
+  '<div class="form-row"><label>住院号</label><input type="text" id="fZyh" value="' + escapeHtml(p['住院号']||'') + '" placeholder="住院号 / 病案号"></div>' +
+  '<div class="form-row"><label>联系电话</label><input type="tel" id="fPhone" value="' + escapeHtml(p['联系电话']||'') + '" placeholder="手机号码"></div>' +
+  '<div class="form-row"><label>入院日期 <span class="req">*</span></label><input type="date" id="fInDate" value="' + escapeHtml(fmtDate(p['入院日期']) || state.today) + '"></div>' +
+  '<div class="form-row"><label>出院日期（非手术患者填写）</label><input type="date" id="fOutDate" value="' + escapeHtml(fmtDate(p['出院日期'])||'') + '"></div>' +
+  '<div class="form-row"><label>手术日期（手术患者填写）</label><input type="date" id="fOpDate" value="' + escapeHtml(fmtDate(p['手术日期'])||'') + '"' + (hasSurgery ? '' : ' onchange="autoFillDiag()"') + '></div>' +
+  '<div class="form-row"><label>主治医师</label><input type="text" id="fDoc" value="' + escapeHtml(p['主治医师']||'') + '" placeholder="医师姓名"></div>' +
+  '</div>' +
+  '<div class="form-row"><label>诊断</label><input type="text" id="fDiag" value="' + escapeHtml(p['诊断']||'') + '" placeholder="如：右股骨颈骨折"></div>' +
+  '<div class="form-row"><label>术式</label><input type="text" id="fOp" value="' + escapeHtml(p['术式']||'') + '" placeholder="如：右人工全髋关节置换术"></div>' +
+  '<div class="form-row"><label>备注</label><textarea id="fNote" placeholder="过敏史、基础疾病、特殊注意事项等">' + escapeHtml(p['备注']||'') + '</textarea></div>' +
+  (!p._id ? '<div class="form-check"><input type="checkbox" id="fUseTpl" checked><label for="fUseTpl" style="margin:0">入院后按「住院提醒」模板自动生成提醒（以入院日为基准）</label></div>' : '');
+}
+function openAddPatientModal(){
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新增患者',
+    patientFormHtml(),
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="savePatient(false)">保存</button>'
+  );
+  bindFormCache('patient');
+}
+function openEditPatientModal(id){
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === id){ p = state.patients[i]; break; } }
+  if (!p) return;
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>编辑患者',
+    patientFormHtml(p),
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="savePatient(true)">保存修改</button>'
+  );
+  bindFormCache('patient');
+}
+function savePatient(isEdit){
+  var name = document.getElementById('fName').value.trim();
+  var inDate = document.getElementById('fInDate').value;
+  if (!name){ toast('请填写患者姓名', true); return; }
+  if (!inDate){ toast('请选择入院日期', true); return; }
+  var data = {
+    '姓名': name,
+    '性别': document.getElementById('fSex').value,
+    '年龄': document.getElementById('fAge').value ? parseInt(document.getElementById('fAge').value, 10) : null,
+    '住院号': document.getElementById('fZyh').value.trim(),
+    '联系电话': document.getElementById('fPhone').value.trim(),
+    '入院日期': inDate,
+    '出院日期': document.getElementById('fOutDate').value || null,
+    '手术日期': document.getElementById('fOpDate').value || null,
+    '诊断': document.getElementById('fDiag').value.trim(),
+    '术式': document.getElementById('fOp').value.trim(),
+    '主治医师': document.getElementById('fDoc').value.trim(),
+    '备注': document.getElementById('fNote').value.trim(),
+    '更新时间': state.today
+  };
+  if (isEdit){
+    var pid = state.selectedPatientId;
+    apiUpdate('patients', pid, data).then(function(){
+      clearFormCache();
+      toast('患者信息已更新');
+      closeModal();
+      refreshAll().then(function(){ state.selectedPatientId = pid; renderDetail(); });
+    });
+  } else {
+    var useTpl = !document.getElementById('fUseTpl') || document.getElementById('fUseTpl').checked;
+    apiAdd('patients', data).then(function(pid){
+      var chain = Promise.resolve();
+      if (useTpl){
+        chain = chain.then(function(){ return genTasksFromTemplates(pid, data, '住院提醒'); });
+      }
+      chain.then(function(){
+        clearFormCache();
+        closeModal();
+        toast('患者已建档' + (useTpl ? '，已生成住院提醒' : ''));
+        refreshAll().then(function(){
+          state.selectedPatientId = pid;
+          switchView('inpatient');
+          openPatientDetail(pid);
+        });
+      });
+    });
+  }
+}
+function autoFillDiag(){
+  var d = document.getElementById('fOpDate').value;
+  var diag = document.getElementById('fDiag');
+  if (d && !diag.value){ diag.placeholder = '如：右股骨颈骨折（已登记手术日期）'; }
+}
+function genTasksFromTemplates(pid, patient, category){
+  var tpls = state.templates.filter(function(t){ return t['类别'] === category; })
+    .sort(function(a,b){ return (a['排序']||0) - (b['排序']||0); });
+  if (!tpls.length) return Promise.resolve();
+  var adds = [];
+  tpls.forEach(function(t){
+    var base = null;
+    if (t['基准'] === '入院日') base = patient['入院日期'];
+    else if (t['基准'] === '手术日') base = patient['手术日期'];
+    else if (t['基准'] === '出院日') base = patient['出院日期'];
+    if (!base) return;
+    var off = t['偏移天数'] || 0;
+    adds.push({
+      '患者ID': pid,
+      '患者姓名': patient['姓名'],
+      '类型': category === '随访节点' ? '随访节点' : '住院提醒',
+      '事项类型': t['事项类型'] || '其他备注',
+      '阶段': t['名称'] || '未命名',
+      '计划日期': addDays(fmtDate(base), off),
+      '内容': t['内容'] || '',
+      '状态': '待处理',
+      '更新时间': state.today
+    });
+  });
+  var chain = Promise.resolve();
+  adds.forEach(function(a){ chain = chain.then(function(){ return apiAdd('tasks', a); }); });
+  return chain;
+}
+
+/* ================= 办理出院（手术/非手术均支持） ================= */
+function dischargePatient(pid){
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
+  if (!p) return;
+  var existing = patientTasks(pid, '随访节点');
+  if (existing.length){
+    toast('该患者已生成过随访计划（' + existing.length + ' 个节点），请勿重复办理', true);
+    return;
+  }
+  var surgical = isSurgical(p);
+  var tpls = state.templates.filter(function(t){
+    if (t['类别'] !== '随访节点') return false;
+    return surgical ? (t['基准'] === '手术日') : (t['基准'] === '出院日' || t['基准'] === '入院日');
+  });
+  if (!tpls.length){
+    // 兜底：从内置 seed 补充缺失基准的随访节点模板
+    var seeded = buildSeed().templates.filter(function(t){
+      if (t['类别'] !== '随访节点') return false;
+      return surgical ? (t['基准'] === '手术日') : (t['基准'] === '出院日' || t['基准'] === '入院日');
+    });
+    if (seeded.length){
+      var have = {};
+      state.templates.forEach(function(t){ have[t._id] = true; });
+      seeded.forEach(function(t){
+        if (!have[t._id]){
+          state.templates.push(t);
+          have[t._id] = true;
+          cacheUpsert('templates', t);
+        }
+      });
+      tpls = seeded;
+    } else {
+      toast(surgical ? '模板库暂无「手术日」基准的随访节点模板，可在模板库新增' : '模板库暂无「出院日」基准的随访节点模板，可在模板库新增', true);
+      return;
+    }
+  }
+  var baseInfo = surgical
+    ? ('手术日 ' + escapeHtml(fmtDate(p['手术日期'])))
+    : (p['出院日期'] ? ('出院日 ' + escapeHtml(fmtDate(p['出院日期']))) : ('出院日 ' + state.today + '（今日，自动记录）'));
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/></svg>办理出院',
+    '<div style="font-size:14px;color:#374151">患者 <b>' + escapeHtml(p['姓名']) + '</b>（' + baseInfo + '，' + escapeHtml(postLabel(p) || '—') + '）<br><br>' +
+    '将按「随访节点」模板（' + (surgical ? '手术患者' : '非手术/保守治疗') + '，共 <b>' + tpls.length + '</b> 个节点）以 <b>' + (surgical ? '手术日' : '出院日') + '为基准</b> 自动生成随访计划，患者状态变为「随访中」。<br><br>确定办理出院？</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn ok" onclick="doDischarge(\'' + pid + '\')">确认出院</button>'
+  );
+}
+function doDischarge(pid){
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
+  if (!p) return;
+  closeModal();
+  var p2 = {};
+  for (var kk in p){ if (p.hasOwnProperty(kk)) p2[kk] = p[kk]; }
+  if (!p2['出院日期']) p2['出院日期'] = state.today;
+  var genP = genTasksFromTemplates(pid, p2, '随访节点');
+  if (!p['出院日期']){
+    genP = genP.then(function(){ return apiUpdate('patients', pid, { '出院日期': state.today }); });
+  }
+  genP.then(function(){
+    return apiUpdate('patients', pid, { '状态': '随访中', '更新时间': state.today });
+  }).then(function(){
+    toast('已办理出院，已进入板块二 · 出院随访');
+    refreshAll().then(function(){
+      state.selectedPatientId = pid;
+      switchView('outpatient');
+      openPatientDetail(pid);
+    });
+  });
+}
+
+/* ================= 任务处理 ================= */
+function openTaskModal(taskId){
+  var t = null;
+  for (var i = 0; i < state.tasks.length; i++){ if (state.tasks[i]._id === taskId){ t = state.tasks[i]; break; } }
+  if (!t) return;
+  var p = findPatient(t['患者ID'], t['患者姓名']);
+  var d = fmtDate(t['计划日期']);
+  var diff = daysBetween(state.today, d);
+  var contentTpls = state.templates.filter(function(x){ return x['类别'] === '随访内容'; });
+  var tplOptions = '<option value="">— 选择内容模板 —</option>';
+  contentTpls.forEach(function(x){ tplOptions += '<option value="' + escapeHtml(x['内容']||'') + '">' + escapeHtml(x['名称']||'未命名') + '</option>'; });
+  openModal(
+    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>处理提醒',
+    '<div class="task-preview"><div class="tp-title">' + escapeHtml((p ? p['姓名'] : t['患者姓名']) || '患者') + taskTypeBadge(t['事项类型']) + statusBadge(t['状态']) + '</div>' +
+    '<div class="tp-meta">📅 ' + escapeHtml(d) + (diff > 0 ? ' · 已逾期 ' + diff + ' 天' : (diff === 0 ? ' · 今天' : ' · 还有 ' + (-diff) + ' 天')) + '</div>' +
+    (t['阶段'] ? '<div class="tp-meta">阶段：' + escapeHtml(t['阶段']) + '</div>' : '') +
+    (t['内容'] ? '<div class="tp-content">' + escapeHtml(t['内容']) + '</div>' : '') +
+    '</div>' +
+    '<div class="form-row"><label>随访记录 / 处理结果</label><textarea id="taskResult" placeholder="记录患者反馈、处理措施、下次安排…"></textarea></div>' +
+    '<div class="form-row"><label>快速填入内容模板</label><select id="tplPick" onchange="pickTemplate(this)">' + tplOptions + '</select></div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button>' +
+    '<button class="btn ghost" onclick="skipTask(\'' + t._id + '\', true)">跳过</button>' +
+    '<button class="btn ok" onclick="completeTask(\'' + t._id + '\')">标记完成</button>'
+  );
+  bindFormCache('task');
+}
+function pickTemplate(sel){
+  if (sel.value){
+    document.getElementById('taskResult').value = (document.getElementById('taskResult').value ? document.getElementById('taskResult').value + '\n' : '') + sel.value;
+  }
+}
+function completeTask(taskId){
+  var t = null;
+  for (var i = 0; i < state.tasks.length; i++){ if (state.tasks[i]._id === taskId){ t = state.tasks[i]; break; } }
+  if (!t) return;
+  var rec = document.getElementById('taskResult') ? document.getElementById('taskResult').value.trim() : '';
+  var p = findPatient(t['患者ID'], t['患者姓名']);
+  closeModal();
+  clearFormCache();
+  var patch = { '状态': '已完成', '完成日期': state.today, '随访记录': rec, '更新时间': state.today };
+  apiUpdate('tasks', taskId, patch).then(function(){
+    if (p){
+      return apiAdd('records', {
+        '患者ID': p._id,
+        '患者姓名': p['姓名'],
+        '日期': state.today,
+        '类型': t['类型'] === '随访节点' ? '随访' : '住院',
+        '内容': (t['阶段'] || '') + (t['事项类型'] ? '（' + t['事项类型'] + '）' : ''),
+        '结果': rec
+      });
+    }
+    return Promise.resolve();
+  }).then(function(){
+    toast('已标记完成' + (p ? '，随访记录已保存' : ''));
+    refreshAll().then(function(){
+      if (state.selectedPatientId) renderDetail();
+    });
+  });
+}
+function skipTask(taskId, fromModal){
+  var t = null;
+  for (var i = 0; i < state.tasks.length; i++){ if (state.tasks[i]._id === taskId){ t = state.tasks[i]; break; } }
+  if (!t) return;
+  if (fromModal){ closeModal(); clearFormCache(); }
+  apiUpdate('tasks', taskId, { '状态': '已跳过', '完成日期': state.today, '随访记录': '已跳过（未执行）', '更新时间': state.today }).then(function(){
+    toast('已跳过该提醒');
+    refreshAll().then(function(){ if (state.selectedPatientId) renderDetail(); });
+  });
+}
+
+/* ================= 随访记录 ================= */
+function openAddRecordModal(pid){
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
+  if (!p) return;
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15h6M9 12h3"/></svg>新增随访记录',
+    '<div style="font-size:14px;color:#374151;margin-bottom:12px">患者：<b>' + escapeHtml(p['姓名']) + '</b></div>' +
+    '<div class="form-grid">' +
+    '<div class="form-row"><label>类型</label><select id="rType"><option value="随访" selected>随访</option><option value="住院">住院</option></select></div>' +
+    '<div class="form-row"><label>日期</label><input type="date" id="rDate" value="' + state.today + '"></div>' +
+    '</div>' +
+    '<div class="form-row"><label>内容</label><input type="text" id="rContent" placeholder="如：术后3月电话随访"></div>' +
+    '<div class="form-row"><label>结果 / 处理</label><textarea id="rResult" placeholder="患者反馈、处理措施…"></textarea></div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveRecord(\'' + pid + '\')">保存</button>'
+  );
+  bindFormCache('record');
+}
+function saveRecord(pid){
+  var content = document.getElementById('rContent').value.trim();
+  var result = document.getElementById('rResult').value.trim();
+  var date = document.getElementById('rDate').value || state.today;
+  if (!content && !result){ toast('请填写内容或结果', true); return; }
+  var p = findPatient(pid, null);
+  apiAdd('records', {
+    '患者ID': pid,
+    '患者姓名': p ? p['姓名'] : '',
+    '日期': date,
+    '类型': document.getElementById('rType').value,
+    '内容': content,
+    '结果': result
+  }).then(function(){
+    clearFormCache();
+    closeModal();
+    toast('随访记录已保存');
+    refreshAll().then(function(){ state.selectedPatientId = pid; renderDetail(); });
+  });
+}
+
+/* ================= 患者删除 ================= */
+function deletePatient(pid){
+  var p = null;
+  for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
+  if (!p) return;
+  var taskN = patientTasks(pid).length;
+  var recN = state.records.filter(function(r){ return r['患者ID'] === pid; }).length;
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>删除患者',
+    '<div style="font-size:14px;color:#374151">确定删除患者 <b>' + escapeHtml(p['姓名']) + '</b> 吗？<br><br>将同时删除其 <b>' + taskN + '</b> 条提醒任务和 <b>' + recN + '</b> 条随访记录，<b style="color:var(--danger)">不可恢复</b>。</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn danger" onclick="doDeletePatient(\'' + pid + '\')">确认删除</button>'
+  );
+}
+function doDeletePatient(pid){
+  var chain = Promise.resolve();
+  patientTasks(pid).forEach(function(t){ chain = chain.then(function(){ return apiRemove('tasks', t._id); }); });
+  state.records.filter(function(r){ return r['患者ID'] === pid; }).forEach(function(r){ chain = chain.then(function(){ return apiRemove('records', r._id); }); });
+  chain = chain.then(function(){ return apiRemove('patients', pid); });
+  chain.then(function(){
+    closeModal();
+    toast('患者已删除');
+    backToList();
+    refreshAll();
+  });
+}
+
+/* ================= 模板 CRUD ================= */
+function openTemplateModal(category, tplId){
+  var t = null;
+  if (tplId){
+    for (var i = 0; i < state.templates.length; i++){ if (state.templates[i]._id === tplId){ t = state.templates[i]; break; } }
+  }
+  t = t || {};
+  var isContent = category === '随访内容';
+  var off = t['偏移天数'];
+  var offVal = (off === null || off === undefined || off === '') ? 0 : off;
+  var body = '';
+  body += '<div class="form-row"><label>名称 <span class="req">*</span></label><input type="text" id="tName" value="' + escapeHtml(t['名称']||'') + '" placeholder="如：术后2周复查 / 入院宣教"></div>';
+  body += '<div class="form-row"><label>内容 <span class="req">*</span></label><textarea id="tContent" placeholder="提醒/随访的具体内容，随访时照着执行">' + escapeHtml(t['内容']||'') + '</textarea></div>';
+  if (!isContent){
+    body += '<div class="form-grid">' +
+    '<div class="form-row"><label>日期基准</label><select id="tBase"><option value="入院日"' + ((t['基准']||'入院日')==='入院日'?' selected':'') + '>入院日</option><option value="手术日"' + ((t['基准']||'')==='手术日'?' selected':'') + '>手术日</option><option value="出院日"' + ((t['基准']||'')==='出院日'?' selected':'') + '>出院日</option></select></div>' +
+    '<div class="form-row"><label>偏移天数（可为负数）</label><input type="number" id="tOff" value="' + offVal + '"></div>' +
+    '<div class="form-row"><label>事项类型</label><select id="tType"><option value="用药提醒">用药提醒</option><option value="康复提醒">康复提醒</option><option value="复查提醒">复查提醒</option><option value="其他备注">其他备注</option></select></div>' +
+    '<div class="form-row"><label>排序（小在前）</label><input type="number" id="tSort" value="' + (t['排序']||0) + '"></div>' +
+    '</div>' +
+    '<div style="font-size:12.5px;color:var(--muted);background:#f9fafb;border-radius:8px;padding:8px 10px">节点日期 = 基准日期 + 偏移天数。如：基准「手术日」、偏移 14 → 术后第 14 天。术前节点可用负数（如 -1）。</div>';
+  }
+  openModal(
+    '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' + (t._id ? '编辑' : '新增') + '「' + category + '」模板',
+    body,
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveTemplate(\'' + category + '\',\'' + (t._id || '') + '\')">保存</button>'
+  );
+}
+function saveTemplate(category, tplId){
+  var name = document.getElementById('tName').value.trim();
+  var content = document.getElementById('tContent').value.trim();
+  if (!name){ toast('请填写模板名称', true); return; }
+  if (!content){ toast('请填写模板内容', true); return; }
+  var isContent = category === '随访内容';
+  var data = {
+    '类别': category,
+    '名称': name,
+    '内容': content,
+    '排序': isContent ? 0 : parseInt(document.getElementById('tSort').value || '0', 10)
+  };
+  if (!isContent){
+    data['基准'] = document.getElementById('tBase').value;
+    data['偏移天数'] = parseInt(document.getElementById('tOff').value || '0', 10);
+    data['事项类型'] = document.getElementById('tType').value;
+  }
+  if (tplId){
+    apiUpdate('templates', tplId, data).then(function(){
+      closeModal(); toast('模板已更新'); refreshAll();
+    });
+  } else {
+    apiAdd('templates', data).then(function(){
+      closeModal(); toast('模板已新增'); refreshAll();
+    });
+  }
+}
+function deleteTemplate(tplId, category){
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>删除模板',
+    '<div style="font-size:14px;color:#374151">确定删除「' + escapeHtml(category) + '」模板吗？<br>已生成的任务不受影响。</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn danger" onclick="doDeleteTemplate(\'' + tplId + '\')">确认删除</button>'
+  );
+}
+function doDeleteTemplate(tplId){
+  apiRemove('templates', tplId).then(function(){
+    closeModal(); toast('模板已删除'); refreshAll();
+  });
+}
+
+/* ================= 清空示例数据 ================= */
+function clearDemoData(){
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>清空示例数据',
+    '<div style="font-size:14px;color:#374151">将删除<b>全部患者、提醒任务、随访记录</b>（模板库保留）。<br><b style="color:var(--danger)">此操作不可恢复</b>，建议先「导出备份」。<br><br>确定清空？</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn danger" onclick="doClearDemo()">确认清空</button>'
+  );
+}
+function doClearDemo(){
+  var chain = Promise.resolve();
+  state.tasks.forEach(function(t){ chain = chain.then(function(){ return apiRemove('tasks', t._id); }); });
+  state.records.forEach(function(r){ chain = chain.then(function(){ return apiRemove('records', r._id); }); });
+  state.patients.forEach(function(p){ chain = chain.then(function(){ return apiRemove('patients', p._id); }); });
+  chain.then(function(){
+    closeModal(); toast('示例数据已清空');
+    backToList();
+    refreshAll();
+  });
+}
+
+/* ================= 导出 / 导入 ================= */
+function collectAll(){
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    patients: state.patients,
+    tasks: state.tasks,
+    records: state.records,
+    templates: state.templates
+  };
+}
+function exportData(){
+  var data = collectAll();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '骨科随访备份_' + state.today + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 300);
+  toast('备份已导出');
+}
+function importData(input){
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var data = JSON.parse(reader.result);
+      if (!data.patients) throw new Error('bad');
+      var pn = (data.patients||[]).length, tn = (data.tasks||[]).length, rn = (data.records||[]).length, tpn = (data.templates||[]).length;
+      openModal(
+        '<svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>导入备份',
+        '<div style="font-size:14px;color:#374151">备份包含：患者 <b>' + pn + '</b> 人、任务 <b>' + tn + '</b> 条、记录 <b>' + rn + '</b> 条、模板 <b>' + tpn + '</b> 条。<br><br>导入将<b>合并新增</b>到当前数据（患者按住院号+姓名去重），不删除现有数据。<br><br>确定导入？</div>',
+        '<button class="btn ghost" onclick="closeModal();document.getElementById(\'importFile\').value=\'\'">取消</button><button class="btn" onclick="doImport(\'' + encodeURIComponent(JSON.stringify(data)) + '\')">确认导入</button>'
+      );
+    } catch(e){
+      toast('文件格式不正确', true);
+    }
+  };
+  reader.readAsText(file);
+}
+function doImport(encoded){
+  var data = JSON.parse(decodeURIComponent(encoded));
+  var chain = Promise.resolve();
+  // 患者去重导入
+  var existing = {};
+  state.patients.forEach(function(p){ existing[(p['姓名']||'') + '|' + (p['住院号']||'')] = true; });
+  var addCount = 0;
+  (data.patients || []).forEach(function(p){
+    var key = (p['姓名']||'') + '|' + (p['住院号']||'');
+    if (existing[key]) return;
+    var row = {};
+    var _ut = '更新时间';
+    for (var k in p){ if (p.hasOwnProperty(k) && k !== '_id') row[k] = p[k]; }
+    row[_ut] = state.today;
+    chain = chain.then(function(){ return apiAdd('patients', row); });
+    addCount++;
+  });
+  // 其余直接导入
+  (data.tasks || []).forEach(function(t){
+    var row = {};
+    for (var k2 in t){ if (t.hasOwnProperty(k2) && k2 !== '_id') row[k2] = t[k2]; }
+    chain = chain.then(function(){ return apiAdd('tasks', row); });
+  });
+  (data.records || []).forEach(function(r){
+    var row = {};
+    for (var k3 in r){ if (r.hasOwnProperty(k3) && k3 !== '_id') row[k3] = r[k3]; }
+    chain = chain.then(function(){ return apiAdd('records', row); });
+  });
+  (data.templates || []).forEach(function(tp){
+    var row = {};
+    for (var k4 in tp){ if (tp.hasOwnProperty(k4) && k4 !== '_id') row[k4] = tp[k4]; }
+    chain = chain.then(function(){ return apiAdd('templates', row); });
+  });
+  chain.then(function(){
+    closeModal();
+    toast('导入完成');
+    refreshAll();
+  });
+}
+
+/* ================= 初始化 ================= */
+function fillSchema(key){
+  return function(schema){
+    var fields = {}, selects = {};
+    (schema.properties || []).forEach(function(f){
+      fields[f.name] = f.type;
+      if ((f.type === 'select' || f.type === 'multi_select') && f.config && f.config.options){
+        var tm = {};
+        f.config.options.forEach(function(o){ tm[o.text] = o.id; });
+        selects[f.name] = { textToId: tm };
+      }
+    });
+    SCHEMA_OPTS[key] = { fields: fields, selects: selects };
+  };
+}
+/* ================= 内置示例数据（本地/离线模式兜底） ================= */
+function buildSeed(){
+  var t = todayStr();
+  var d = function(n){ return addDays(t, n); };
+  return {
+    patients: [
+      { _id: 'seed_p1', '姓名': '张三(演示)', '性别': '男', '年龄': 68, '住院号': 'ZY-DEMO-01', '联系电话': '13800000001', '入院日期': d(-21), '出院日期': d(-16), '手术日期': d(-19), '诊断': '右股骨颈骨折', '术式': '右侧人工全髋关节置换术', '主治医师': '李医生', '状态': '随访中', '备注': '演示数据：高血压病史，规律服药', '更新时间': t },
+      { _id: 'seed_p2', '姓名': '李四(演示)', '性别': '女', '年龄': 45, '住院号': 'ZY-DEMO-02', '联系电话': '13900000002', '入院日期': d(-7), '诊断': '左桡骨远端骨折', '术式': '小夹板外固定（保守治疗）', '主治医师': '王医生', '状态': '住院中', '备注': '演示数据：非手术患者', '更新时间': t }
+    ],
+    tasks: [
+      { _id: 'seed_t1', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '类型': '随访节点', '事项类型': '复查提醒', '阶段': '术后2周复查', '计划日期': d(-5), '内容': '切口拆线/愈合评估，复查 X 线，初步评估假体位置，指导早期功能锻炼。', '状态': '待处理', '更新时间': t },
+      { _id: 'seed_t2', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '类型': '随访节点', '事项类型': '复查提醒', '阶段': '术后6周复查', '计划日期': d(23), '内容': '复查 X 线评估骨痂生长/假体稳定性，调整康复计划。', '状态': '待处理', '更新时间': t },
+      { _id: 'seed_t3', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '类型': '随访节点', '事项类型': '康复提醒', '阶段': '术后3月评估', '计划日期': d(71), '内容': '功能评估：关节活动度、肌力、疼痛评分（VAS）。', '状态': '待处理', '更新时间': t },
+      { _id: 'seed_t4', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '类型': '住院提醒', '事项类型': '其他备注', '阶段': '入院第1天宣教', '计划日期': d(-21), '内容': '入院宣教：交代病房环境、主管医师，评估疼痛程度。', '状态': '已完成', '完成日期': d(-21), '随访记录': '已宣教，交代病房环境', '更新时间': t },
+      { _id: 'seed_t5', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '类型': '住院提醒', '事项类型': '用药提醒', '阶段': '术后当天', '计划日期': d(-19), '内容': '术后疼痛评估，镇痛药物按需使用，观察切口渗血。', '状态': '已完成', '完成日期': d(-19), '随访记录': '疼痛控制良好', '更新时间': t },
+      { _id: 'seed_t6', '患者ID': 'seed_p2', '患者姓名': '李四(演示)', '类型': '住院提醒', '事项类型': '其他备注', '阶段': '出院前宣教', '计划日期': t, '内容': '出院宣教：交代出院带药及用法、复诊时间、居家康复要点。', '状态': '待处理', '更新时间': t },
+      { _id: 'seed_t7', '患者ID': 'seed_p2', '患者姓名': '李四(演示)', '类型': '住院提醒', '事项类型': '其他备注', '阶段': '入院第1天宣教', '计划日期': d(-7), '内容': '入院宣教：交代病房环境、主管医师。', '状态': '已完成', '完成日期': d(-7), '随访记录': '已宣教', '更新时间': t }
+    ],
+    templates: [
+      { _id: 'seed_tpl1', '类别': '住院提醒', '名称': '入院第1天宣教', '内容': '入院宣教：交代病房环境、主管医师及责任护士；评估疼痛程度，讲解患肢体位要求。', '基准': '入院日', '偏移天数': 0, '事项类型': '其他备注', '排序': 1 },
+      { _id: 'seed_tpl2', '类别': '住院提醒', '名称': '术前1天准备', '内容': '术前准备：禁食禁水 8 小时，术区皮肤准备，签署手术/麻醉同意书，备血备皮。', '基准': '手术日', '偏移天数': -1, '事项类型': '其他备注', '排序': 2 },
+      { _id: 'seed_tpl3', '类别': '住院提醒', '名称': '术后当天', '内容': '术后疼痛评估，镇痛药物按需使用；观察切口敷料渗血情况及患肢末梢血运、感觉、运动。', '基准': '手术日', '偏移天数': 0, '事项类型': '用药提醒', '排序': 3 },
+      { _id: 'seed_tpl4', '类别': '住院提醒', '名称': '术后第2天', '内容': '指导踝泵运动及股四头肌等长收缩训练；抗凝药物预防深静脉血栓（按医嘱）。', '基准': '手术日', '偏移天数': 2, '事项类型': '康复提醒', '排序': 4 },
+      { _id: 'seed_tpl5', '类别': '住院提醒', '名称': '出院前宣教', '内容': '出院宣教：交代出院带药及用法、复诊时间（按随访计划）、居家康复要点、伤口护理注意事项。', '基准': '入院日', '偏移天数': 7, '事项类型': '其他备注', '排序': 5 },
+      { _id: 'seed_tpl6', '类别': '随访节点', '名称': '术后2周复查', '内容': '切口拆线/愈合评估，复查 X 线，初步评估假体位置或骨折对位；指导早期功能锻炼强度。', '基准': '手术日', '偏移天数': 14, '事项类型': '复查提醒', '排序': 1 },
+      { _id: 'seed_tpl7', '类别': '随访节点', '名称': '术后6周复查', '内容': '复查 X 线评估骨痂生长/假体稳定性，调整康复计划，指导部分负重过渡。', '基准': '手术日', '偏移天数': 42, '事项类型': '复查提醒', '排序': 2 },
+      { _id: 'seed_tpl8', '类别': '随访节点', '名称': '术后3月评估', '内容': '功能评估：关节活动度、肌力、疼痛评分（VAS）；解答康复问题，调整日常活动强度。', '基准': '手术日', '偏移天数': 90, '事项类型': '康复提醒', '排序': 3 },
+      { _id: 'seed_tpl9', '类别': '随访节点', '名称': '术后6月复查', '内容': '复查 X 线，评估远期恢复情况，指导逐步恢复正常活动。', '基准': '手术日', '偏移天数': 180, '事项类型': '复查提醒', '排序': 4 },
+      { _id: 'seed_tpl10', '类别': '随访节点', '名称': '术后1年复查', '内容': '年度复查：X 线 + 功能评估，交代长期随访安排及人工关节使用注意事项。', '基准': '手术日', '偏移天数': 365, '事项类型': '复查提醒', '排序': 5 },
+      { _id: 'seed_tpl15', '类别': '随访节点', '名称': '出院后2周复查', '内容': '复查 X 线，评估肿胀疼痛及骨折对位情况，指导功能锻炼（非手术/保守治疗患者）。', '基准': '出院日', '偏移天数': 14, '事项类型': '复查提醒', '排序': 6 },
+      { _id: 'seed_tpl16', '类别': '随访节点', '名称': '出院后4周复查', '内容': '复查 X 线评估骨痂生长，调整外固定与康复计划（非手术/保守治疗患者）。', '基准': '出院日', '偏移天数': 28, '事项类型': '复查提醒', '排序': 7 },
+      { _id: 'seed_tpl17', '类别': '随访节点', '名称': '出院后6周评估', '内容': '功能评估：肿胀、疼痛、关节活动度，逐步增加活动量（非手术/保守治疗患者）。', '基准': '出院日', '偏移天数': 42, '事项类型': '康复提醒', '排序': 8 },
+      { _id: 'seed_tpl18', '类别': '随访节点', '名称': '出院后3月复查', '内容': '复查 X 线，指导恢复日常活动与力量训练（非手术/保守治疗患者）。', '基准': '出院日', '偏移天数': 90, '事项类型': '复查提醒', '排序': 9 },
+      { _id: 'seed_tpl19', '类别': '随访节点', '名称': '出院后6月复查', '内容': '远期评估：功能恢复情况，解答患者疑问（非手术/保守治疗患者）。', '基准': '出院日', '偏移天数': 180, '事项类型': '复查提醒', '排序': 10 },
+      { _id: 'seed_tpl11', '类别': '随访内容', '名称': '用药提醒', '内容': '按时服用抗凝/抗骨质疏松等药物，勿自行停药或增减剂量；注意胃肠道反应，出现黑便、牙龈出血、皮肤瘀斑及时就诊。', '排序': 1 },
+      { _id: 'seed_tpl12', '类别': '随访内容', '名称': '康复指导', '内容': '每日踝泵运动 300 次、股四头肌等长收缩训练；遵医嘱扶拐行走，患肢按计划负重；循序渐进，防跌倒。', '排序': 2 },
+      { _id: 'seed_tpl13', '类别': '随访内容', '名称': '复查安排', '内容': '请按计划于【日期】返院复查 X 线，挂号骨科门诊；复查前保持伤口清洁干燥。', '排序': 3 },
+      { _id: 'seed_tpl14', '类别': '随访内容', '名称': '饮食与生活', '内容': '高蛋白、高钙饮食，多晒太阳促进钙吸收；戒烟限酒；注意患肢保暖。', '排序': 4 }
+    ],
+    records: [
+      { _id: 'seed_r1', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '日期': d(-19), '类型': '住院', '内容': '术后当日', '结果': '手术顺利，生命体征平稳，患肢末梢血运良好' },
+      { _id: 'seed_r2', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '日期': d(-12), '类型': '随访', '内容': '电话随访', '结果': '切口愈合良好无红肿，已指导居家康复训练' }
+    ]
+  };
+}
+function seedIfEmpty(){
+  var seeded = false;
+  try { seeded = localStorage.getItem(PREFIX + 'seeded') === '1'; } catch(e){}
+  if (seeded) return;
+  var c = loadCache();
+  var hasData = (c.patients && c.patients.length) || (c.templates && c.templates.length);
+  if (!hasData){
+    saveCache(buildSeed());
+  }
+  try { localStorage.setItem(PREFIX + 'seeded', '1'); } catch(e){}
+}
+/* 模板升级：旧版本缓存的模板缺新内置模板时，自动补全（不覆盖用户已改内容） */
+var SEED_VERSION = 2;
+function seedUpgrade(){
+  var c = loadCache();
+  var v = 0;
+  try { v = parseInt(localStorage.getItem(PREFIX + 'seed_version'), 10) || 0; } catch(e){}
+  if (v >= SEED_VERSION) return;
+  var changed = false;
+  if (c.templates && c.templates.length){
+    var have = {};
+    c.templates.forEach(function(t){ if (t && t._id) have[t._id] = true; });
+    var fresh = buildSeed().templates;
+    fresh.forEach(function(t){
+      if (t && t._id && !have[t._id]){
+        c.templates.push(t);
+        have[t._id] = true;
+        changed = true;
+      }
+    });
+    if (changed) saveCache(c);
+  }
+  try { localStorage.setItem(PREFIX + 'seed_version', String(SEED_VERSION)); } catch(e){}
+}
+
+function initSchema(){
+  cloudMode = ghOk();
+  ['patients','tasks','records','templates'].forEach(function(k){ SCHEMA_OPTS[k] = { fields: {}, selects: {} }; });
+  var sub = document.getElementById('headerSub');
+  if (!cloudMode){
+    setSyncBadge('local');
+    if (sub) sub.textContent = '本地模式（单设备，未启用云端同步）';
+    seedIfEmpty();
+    seedUpgrade();
+    refreshAll();
+    return;
+  }
+  if (sub) sub.textContent = 'GitHub 云端同步（多设备共享）';
+  setSyncBadge('syncing');
+  ghPull().then(function(){
+    var c = loadCache();
+    var hasData = (c.patients && c.patients.length) || (c.templates && c.templates.length);
+    if (!hasData){ saveCache(buildSeed()); }
+    seedUpgrade();
+    return refreshAll();
+  }).then(function(){ if (cloudMode) ghPush(); });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  initSchema();
+  updateModeBanner();
+  var dismissed = false;
+  try { dismissed = localStorage.getItem(PREFIX + 'banner_dismissed') === '1'; } catch(e){}
+  if (!dismissed){
+    var b = document.getElementById('modeBanner');
+    if (b) b.style.display = 'block';
+  }
+});
+
+function dismissBanner(){
+  var b = document.getElementById('modeBanner');
+  if (b) b.style.display = 'none';
+  try { localStorage.setItem(PREFIX + 'banner_dismissed', '1'); } catch(e){}
+}
+function updateModeBanner(){
+  var b = document.getElementById('modeBanner');
+  if (!b) return;
+  var txt = b.querySelector('.mb-text');
+  if (!txt) return;
+  if (cloudMode){
+    txt.innerHTML = '<b>已启用 GitHub 云端同步</b> · 数据存于你的私有仓库，手机/电脑打开同一网址并登录同一账号即可实时共享。';
+  } else {
+    txt.innerHTML = '<b>当前为本地保存模式</b> · 数据仅存本设备浏览器。点击右上角「同步设置」配置 GitHub 私有仓库即可开启多设备共享。';
+  }
+}
+function showCloudTip(){
+  openSyncSettings();
+}
+function openSyncSettings(){
+  var c = ghConfig() || DEFAULT_SYNC;
+  var body = ''
+    + '<div class="form-row"><label>GitHub 用户名 / 组织</label><input id="ghOwner" value="' + escapeHtml(c.owner||'') + '" placeholder="例如 HoboLee333"></div>'
+    + '<div class="form-row"><label>仓库名</label><input id="ghRepo" value="' + escapeHtml(c.repo||'') + '" placeholder="例如 ortho-followup"></div>'
+    + '<div class="form-row"><label>分支</label><input id="ghBranch" value="' + escapeHtml(c.branch||'main') + '"></div>'
+    + '<div class="form-row"><label>数据文件路径</label><input id="ghPath" value="' + escapeHtml(c.path||'ortho-followup.json') + '" placeholder="仓库内路径，如 data/ortho.json"></div>'
+    + '<div class="form-row"><label>访问令牌 (PAT)</label><input id="ghToken" type="password" value="' + escapeHtml(c.token||'') + '" placeholder="ghp_... 需 repo 权限"></div>'
+    + '<div class="form-tip">令牌仅保存在<strong>本机浏览器</strong>，不上传任何服务器。建议使用<strong>私有仓库</strong>，并生成仅含 <code>repo</code> 权限的 Personal Access Token（Fine-grained 或 Classic 均可）。</div>';
+  var foot = '<button class="btn ghost" onclick="closeModal()">取消</button>'
+    + '<button class="btn ghost" onclick="testSync()">测试连接</button>'
+    + '<button class="btn" onclick="saveSyncSettings()">保存并同步</button>';
+  openModal('云端同步设置（GitHub）', body, foot);
+}
+function saveSyncSettings(){
+  var cfg = {
+    owner: (document.getElementById('ghOwner').value||'').trim(),
+    repo: (document.getElementById('ghRepo').value||'').trim(),
+    branch: (document.getElementById('ghBranch').value||'main').trim(),
+    path: (document.getElementById('ghPath').value||'ortho-followup.json').trim(),
+    token: (document.getElementById('ghToken').value||'').trim()
+  };
+  if (!cfg.owner || !cfg.repo || !cfg.token){ toast('请填写用户名、仓库名与访问令牌', true); return; }
+  ghSaveConfig(cfg);
+  cloudMode = true;
+  var sub = document.getElementById('headerSub'); if (sub) sub.textContent = 'GitHub 云端同步（多设备共享）';
+  var b = document.getElementById('modeBanner'); if (b) b.style.display = 'none';
+  closeModal();
+  toast('已保存，正在连接云端…');
+  ghPull().then(function(){
+    var c = loadCache();
+    var hasData = (c.patients && c.patients.length) || (c.templates && c.templates.length);
+    if (!hasData){ saveCache(buildSeed()); }
+    seedUpgrade();
+    return refreshAll();
+  }).then(function(){ if (cloudMode) ghPush(); });
+}
+function testSync(){
+  var cfg = {
+    owner: (document.getElementById('ghOwner').value||'').trim(),
+    repo: (document.getElementById('ghRepo').value||'').trim(),
+    branch: (document.getElementById('ghBranch').value||'main').trim(),
+    path: (document.getElementById('ghPath').value||'ortho-followup.json').trim(),
+    token: (document.getElementById('ghToken').value||'').trim()
+  };
+  if (!cfg.owner || !cfg.repo || !cfg.token){ toast('请先填写用户名、仓库名与令牌', true); return; }
+  ghSaveConfig(cfg);
+  cloudMode = true;
+  setSyncBadge('syncing');
+  ghPullRaw().then(function(remote){
+    toast(remote.data ? ('连接成功，已读取云端数据（' + ['patients','tasks','records','templates'].filter(function(k){ return remote.data[k] && remote.data[k].length; }).length + ' 类有记录）') : '连接成功，云端暂无数据，保存后将自动创建文件');
+    setSyncBadge('ok');
+  }).catch(function(e){ setSyncBadge('error'); toast('连接失败：' + (e.message||e), true); });
+}
+
+/* 暴露给 onclick 的全局函数 */
+window.switchView = switchView;
+window.renderInpatient = renderInpatient;
+window.renderOutpatient = renderOutpatient;
+window.setOutFilter = setOutFilter;
+window.openAddPatientModal = openAddPatientModal;
+window.openEditPatientModal = openEditPatientModal;
+window.savePatient = savePatient;
+window.autoFillDiag = autoFillDiag;
+window.openPatientDetail = openPatientDetail;
+window.backToList = backToList;
+window.dischargePatient = dischargePatient;
+window.doDischarge = doDischarge;
+window.openTaskModal = openTaskModal;
+window.completeTask = completeTask;
+window.skipTask = skipTask;
+window.pickTemplate = pickTemplate;
+window.openAddRecordModal = openAddRecordModal;
+window.saveRecord = saveRecord;
+window.deletePatient = deletePatient;
+window.doDeletePatient = doDeletePatient;
+window.openTemplateModal = openTemplateModal;
+window.saveTemplate = saveTemplate;
+window.deleteTemplate = deleteTemplate;
+window.doDeleteTemplate = doDeleteTemplate;
+window.clearDemoData = clearDemoData;
+window.doClearDemo = doClearDemo;
+window.exportData = exportData;
+window.importData = importData;
+window.doImport = doImport;
+window.closeModal = closeModal;
+window.dismissBanner = dismissBanner;
+window.showCloudTip = showCloudTip;
+window.openSyncSettings = openSyncSettings;
+window.saveSyncSettings = saveSyncSettings;
+window.testSync = testSync;
+window.dismissBanner = dismissBanner;
+window.showCloudTip = showCloudTip;
+
+})();
+</script>
+</body>
+</html>
