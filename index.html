@@ -627,6 +627,39 @@ function getLocalState(){
     templates: c.templates || []
   };
 }
+/* 种子/演示数据标记为底层基线：不参与云端同步，且以代码为准始终覆盖，避免旧缓存回写云端污染默认模板 */
+var SEED_IDS = null;
+function seedIdSet(){
+  if (SEED_IDS) return SEED_IDS;
+  SEED_IDS = {};
+  var s = buildSeed();
+  ['patients','tasks','records','templates'].forEach(function(k){ (s[k]||[]).forEach(function(r){ if (r && r._id) SEED_IDS[r._id] = true; }); });
+  return SEED_IDS;
+}
+function userRows(arr){
+  var ids = seedIdSet();
+  return (arr||[]).filter(function(r){ return !(r && (r._seed || ids[r._id])); });
+}
+function localUserState(){
+  var c = loadCache();
+  var out = {};
+  ['patients','tasks','records','templates'].forEach(function(k){ out[k] = userRows(c[k]); });
+  return out;
+}
+/* 以代码基线保证默认模板/演示数据始终存在且为最新（覆盖本地可能残留的旧内容）；不删除用户自建数据 */
+function applySeedBaseline(){
+  var seed = buildSeed();
+  var obs = {};
+  (OBSOLETE_TPLS || []).forEach(function(id){ obs[id] = true; });
+  var c = loadCache();
+  ['patients','tasks','records','templates'].forEach(function(k){
+    var map = {};
+    (c[k]||[]).forEach(function(r){ if (r && r._id) map[r._id] = r; });
+    (seed[k]||[]).forEach(function(s){ map[s._id] = s; }); /* 种子 _id 始终以代码为准 */
+    c[k] = Object.keys(map).filter(function(id){ return !obs[id]; }).map(function(id){ return map[id]; });
+  });
+  saveCache(c);
+}
 
 /* ================= API 封装（云端优先 + 本地兜底 + 离线队列） ================= */
 function toProps(tableKey, obj){
@@ -822,7 +855,13 @@ function mergedState(local, remote){
 }
 function ghApplyMerged(merged){
   var c = loadCache();
-  c.patients = merged.patients; c.tasks = merged.tasks; c.records = merged.records; c.templates = merged.templates;
+  ['patients','tasks','records','templates'].forEach(function(k){
+    var arr = (merged[k] || []).slice();
+    var seedMap = {};
+    (c[k] || []).forEach(function(r){ if (r && r._seed) seedMap[r._id] = r; });
+    Object.keys(seedMap).forEach(function(id){ if (!arr.some(function(r){ return r._id === id; })) arr.push(seedMap[id]); });
+    c[k] = arr;
+  });
   saveCache(c);
 }
 var _pushTimer = null;
@@ -836,8 +875,9 @@ function ghPush(){
   setSyncBadge('syncing');
   var attempt = function(){
     return ghPullRaw().then(function(remote){
-      var merged = mergedState(getLocalState(), remote.data);
+      var merged = mergedState(localUserState(), userRows(remote.data));
       ghApplyMerged(merged);
+      applySeedBaseline();
       var content = btoa(unescape(encodeURIComponent(JSON.stringify(merged, null, 2))));
       return ghApi('/repos/' + ghConfig().owner + '/' + ghConfig().repo + '/contents/' + encodeURIComponent(ghFilePath()), {
         method: 'PUT',
@@ -857,7 +897,8 @@ function ghPull(){
   if (!ghOk()) return Promise.resolve();
   setSyncBadge('syncing');
   return ghPullRaw().then(function(remote){
-    if (remote.data) ghApplyMerged(mergedState(getLocalState(), remote.data));
+    if (remote.data) ghApplyMerged(mergedState(localUserState(), userRows(remote.data)));
+    applySeedBaseline();
     setSyncBadge('ok');
   }).catch(function(e){
     setSyncBadge('error');
@@ -1865,7 +1906,7 @@ function fillSchema(key){
 function buildSeed(){
   var t = todayStr();
   var d = function(n){ return addDays(t, n); };
-  return {
+  var __s = {
     patients: [
       { _id: 'seed_p1', '姓名': '张三(演示)', '性别': '男', '年龄': 68, '住院号': 'ZY-DEMO-01', '联系电话': '13800000001', '入院日期': d(-21), '出院日期': d(-16), '手术日期': d(-19), '诊断': '右股骨颈骨折', '术式': '右侧人工全髋关节置换术', '主治医师': '李医生', '状态': '随访中', '备注': '演示数据：高血压病史，规律服药', '更新时间': t },
       { _id: 'seed_p2', '姓名': '李四(演示)', '性别': '女', '年龄': 45, '住院号': 'ZY-DEMO-02', '联系电话': '13900000002', '入院日期': d(-7), '诊断': '左桡骨远端骨折', '术式': '小夹板外固定（保守治疗）', '主治医师': '王医生', '状态': '住院中', '备注': '演示数据：非手术患者', '更新时间': t }
@@ -1903,6 +1944,8 @@ function buildSeed(){
       { _id: 'seed_r2', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '日期': d(-12), '类型': '随访', '内容': '电话随访', '结果': '切口愈合良好无红肿，已指导居家康复训练' }
     ]
   };
+  ['patients','tasks','records','templates'].forEach(function(k){ (__s[k]||[]).forEach(function(r){ if (r) r._seed = true; }); });
+  return __s;
 }
 function seedIfEmpty(){
   var seeded = false;
@@ -1953,19 +1996,22 @@ function initSchema(){
     setSyncBadge('local');
     if (sub) sub.textContent = '本地模式（单设备，未启用云端同步）';
     seedIfEmpty();
-    seedUpgrade();
+    applySeedBaseline();
     refreshAll();
     return;
   }
   if (sub) sub.textContent = 'GitHub 云端同步（多设备共享）';
   setSyncBadge('syncing');
   ghPull().then(function(){
-    var c = loadCache();
-    var hasData = (c.patients && c.patients.length) || (c.templates && c.templates.length);
-    if (!hasData){ saveCache(buildSeed()); }
-    seedUpgrade();
+    applySeedBaseline();
     return refreshAll();
-  }).then(function(){ if (cloudMode) ghPush(); });
+  }).then(function(){
+    if (cloudMode) ghPush();
+    /* 多设备轻量同步：每 30 秒自动拉取一次，使其他设备的改动在本端刷新后可见 */
+    if (cloudMode && !window.__orthoPoll){
+      window.__orthoPoll = setInterval(function(){ ghPull().then(function(){ refreshAll(); }); }, 30000);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', function(){
