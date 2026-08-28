@@ -1263,14 +1263,14 @@ function idbUrl(id){ return idbGet(id).then(function(b){ if(!b) return null; var
 function openChartModal(pid){
   var p=getPatient(pid); if(!p) return;
   var chart=p['病历']||{};
-  var rows=CHART_FIELDS.map(function(f){ return '<div class="form-row"><label>'+escapeHtml(f)+'</label><textarea id="cf_'+f+'" placeholder="'+escapeHtml(f)+'">'+escapeHtml(chart[f]||'')+'</textarea></div>'; }).join('');
+  var rows=CHART_FIELDS.map(function(f, i){ return '<div class="form-row"><label>'+escapeHtml(f)+'</label><textarea id="cf_'+i+'" placeholder="'+escapeHtml(f)+'">'+escapeHtml(chart[f]||'')+'</textarea></div>'; }).join('');
   openModal('<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>骨科病历夹',
     '<div class="form-grid">'+rows+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">病历文本随患者多端同步；图片/视频见下方「附件」，本机存储。</div>',
     '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveChart(\''+pid+'\')">保存病历</button>');
 }
 function saveChart(pid){
   var chart={};
-  CHART_FIELDS.forEach(function(f){ var v=document.getElementById('cf_'+f).value.trim(); if(v) chart[f]=v; });
+  CHART_FIELDS.forEach(function(f, i){ var el=document.getElementById('cf_'+i); var v=el?el.value.trim():''; if(v) chart[f]=v; });
   apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('病历已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
 }
 /* 拍照 / 上传附件（原文件存 IndexedDB，元数据写患者） */
@@ -2352,6 +2352,17 @@ window.saveSyncSettings = saveSyncSettings;
 window.testSync = testSync;
 window.dismissBanner = dismissBanner;
 window.showCloudTip = showCloudTip;
+window.openChartModal = openChartModal;
+window.saveChart = saveChart;
+window.pickAttachment = pickAttachment;
+window.openAttachmentModal = openAttachmentModal;
+window.saveAttCap = saveAttCap;
+window.delAttachment = delAttachment;
+window.runOCR = runOCR;
+window.applyOcr = applyOcr;
+window.loadGallery = loadGallery;
+window.state = state;
+window.renderDetail = renderDetail;
 
 })();
 </script>
