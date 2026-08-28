@@ -319,7 +319,45 @@ h2.sec-title svg{width:18px;height:18px;stroke:var(--primary);fill:none;stroke-w
   .nav-btn{flex:1;justify-content:center;padding:11px 4px}
   .h-title p{display:none}
 }
-</style>
+
+/* ===== 病历夹 / 附件 / 患者全景 ===== */
+.media-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.media-bar .btn{margin:0}
+.chart-sum{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:10px}
+.cs-row{display:flex;gap:8px;font-size:13px;padding:3px 0;border-bottom:1px dashed #eef2f7}
+.cs-row:last-child{border-bottom:none}
+.cs-k{color:var(--muted);min-width:84px;flex-shrink:0;font-weight:600}
+.cs-v{color:#374151;white-space:pre-wrap;word-break:break-word;flex:1}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin-top:6px}
+.thumb-wrap{cursor:pointer}
+.thumb-box{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+.thumb-img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.play{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center}
+.thumb.play svg{width:34px;height:34px;fill:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.thumb-cap{font-size:11.5px;color:var(--muted);margin-top:4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge.b-media{background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc}
+.panorama{position:relative;padding-left:18px}
+.panorama:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.pan-item{position:relative;margin-bottom:10px}
+.pan-item .pan-dot{position:absolute;left:-18px;top:6px;width:10px;height:10px;border-radius:50%;background:#fff;border:3px solid var(--muted)}
+.pan-item.pan-task .pan-dot{border-color:var(--primary)}
+.pan-item.pan-chart .pan-dot{border-color:#0e7490}
+.pan-item.pan-media .pan-dot{border-color:#7c3aed}
+.pan-body{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+.pan-item.pan-task .pan-body{border-left:3px solid var(--primary)}
+.pan-item.pan-chart .pan-body{border-left:3px solid #0e7490}
+.pan-item.pan-media .pan-body{border-left:3px solid #7c3aed}
+.pan-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pan-tag{font-weight:700;font-size:12px;padding:1px 9px;border-radius:999px}
+.pan-tag.t-提醒{background:var(--primary-weak);color:var(--primary)}
+.pan-tag.t-病历{background:#ecfeff;color:#0e7490}
+.pan-tag.t-资料{background:#f5f3ff;color:#7c3aed}
+.pan-date{font-size:12px;color:var(--muted);font-weight:700}
+.pan-title{font-weight:700;font-size:14px;margin-top:4px}
+.pan-content{font-size:13px;color:#374151;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+#ocrText{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 11px;outline:none;font-size:13.5px;line-height:1.6;resize:vertical}
+#ocrText:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+
 </head>
 <body>
 
@@ -1194,6 +1232,8 @@ function patientCardHtml(p, mode){
     if (overCnt) html += '<span class="badge b-over">逾期 ' + overCnt + ' 项</span>';
     html += '<span class="badge b-skip">随访 ' + recs.length + ' 次</span>';
   }
+  var attN = (p['附件']||[]).length;
+  if (attN) html += '<span class="badge b-media">📎 '+attN+'</span>';
   html += '</div>';
   if (mode === 'in' && p['状态'] === '住院中'){
     html += '<div style="margin-top:10px;display:flex;gap:8px">';
@@ -1205,6 +1245,172 @@ function patientCardHtml(p, mode){
   return html;
 }
 
+/* ================= 患者病历夹 / 附件 / 拍照识别（OCR） ================= */
+var CHART_FIELDS = ['主诉','现病史','既往史','查体','影像/辅助检查','初步诊断','手术记录摘要','出院情况'];
+var _objUrls = [];
+function revokeObjUrls(){ _objUrls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} }); _objUrls = []; }
+function getPatient(pid){ for (var i=0;i<state.patients.length;i++){ if (state.patients[i]._id===pid) return state.patients[i]; } return null; }
+/* IndexedDB：仅存图片/视频原文件（本机），元数据随患者同步 */
+function idb(){ return new Promise(function(res,rej){ try{ var r=indexedDB.open('ortho_media',1); r.onupgradeneeded=function(){ if(!r.result.objectStoreNames.contains('blobs')) r.result.createObjectStore('blobs'); }; r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error||new Error('IndexedDB 不可用')); }; }catch(e){ rej(e); } }); }
+function idbTx(mode){ return idb().then(function(db){ return new Promise(function(res,rej){ var t=db.transaction('blobs',mode); t.oncomplete=function(){ res(); }; t.onerror=function(){ rej(t.error); }; var s=t.objectStore('blobs'); res(s); }); }); }
+function idbPut(id,blob){ return idb().then(function(db){ return new Promise(function(res,rej){ var t=db.transaction('blobs','readwrite'); t.objectStore('blobs').put(blob,id); t.oncomplete=function(){res();}; t.onerror=function(){rej(t.error);}; }); }); }
+function idbGet(id){ return idb().then(function(db){ return new Promise(function(res,rej){ var rq=db.transaction('blobs','readonly').objectStore('blobs').get(id); rq.onsuccess=function(){res(rq.result);}; rq.onerror=function(){rej(rq.error);}; }); }); }
+function idbDel(id){ return idb().then(function(db){ return new Promise(function(res,rej){ var t=db.transaction('blobs','readwrite'); t.objectStore('blobs').delete(id); t.oncomplete=function(){res();}; t.onerror=function(){rej(t.error);}; }); }); }
+function idbUrl(id){ return idbGet(id).then(function(b){ if(!b) return null; var u=URL.createObjectURL(b); _objUrls.push(u); return u; }); }
+
+/* 编辑结构化骨科病历（文本，随患者多端同步） */
+function openChartModal(pid){
+  var p=getPatient(pid); if(!p) return;
+  var chart=p['病历']||{};
+  var rows=CHART_FIELDS.map(function(f){ return '<div class="form-row"><label>'+escapeHtml(f)+'</label><textarea id="cf_'+f+'" placeholder="'+escapeHtml(f)+'">'+escapeHtml(chart[f]||'')+'</textarea></div>'; }).join('');
+  openModal('<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>骨科病历夹',
+    '<div class="form-grid">'+rows+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">病历文本随患者多端同步；图片/视频见下方「附件」，本机存储。</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveChart(\''+pid+'\')">保存病历</button>');
+}
+function saveChart(pid){
+  var chart={};
+  CHART_FIELDS.forEach(function(f){ var v=document.getElementById('cf_'+f).value.trim(); if(v) chart[f]=v; });
+  apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('病历已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
+}
+/* 拍照 / 上传附件（原文件存 IndexedDB，元数据写患者） */
+function pickAttachment(pid, kind){
+  var inp=document.createElement('input'); inp.type='file';
+  if (kind==='camera'){ inp.accept='image/*'; inp.capture='environment'; }
+  else if (kind==='video'){ inp.accept='video/*'; inp.capture='environment'; }
+  else { inp.accept='image/*,video/*'; }
+  inp.onchange=function(){
+    var f=inp.files && inp.files[0]; if(!f) return;
+    var id='att_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    var att={ id:id, type:(f.type.indexOf('video')>=0?'video':'image'), name:f.name||(kind==='video'?'视频':'图片'), caption:'', ts:new Date().toISOString().slice(0,10) };
+    idbPut(id, f).then(function(){ var p=getPatient(pid); if(!p) return; var list=(p['附件']||[]).slice(); list.push(att); return apiUpdate('patients', pid, { '附件': list }); })
+      .then(function(){ toast('附件已保存（本机存储）'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); })
+      .catch(function(e){ toast('附件保存失败：'+(e.message||e), true); });
+  };
+  inp.click();
+}
+function openAttachmentModal(attId, pid){
+  var p=getPatient(pid); if(!p) return;
+  var att=null; (p['附件']||[]).forEach(function(a){ if(a.id===attId) att=a; }); if(!att) return;
+  idbUrl(attId).then(function(url){
+    var media = att.type==='video'
+      ? (url ? '<video src="'+url+'" controls style="width:100%;border-radius:12px;max-height:55vh"></video>' : '<div class="tl-empty">本机未找到原视频（附件仅存于采集设备）</div>')
+      : (url ? '<img src="'+url+'" style="width:100%;border-radius:12px;max-height:55vh;object-fit:contain;background:#000">' : '<div class="tl-empty">本机未找到原图（附件仅存于采集设备）</div>');
+    var body = media +
+      '<div class="form-row"><label>说明 / 标题</label><input type="text" id="attCap" value="'+escapeHtml(att.caption||'')+'"></div>' +
+      (att.type==='image'
+        ? '<div class="media-bar"><button class="btn ghost sm" onclick="saveAttCap(\''+attId+'\',\''+pid+'\')">保存说明</button><button class="btn sm" onclick="runOCR(\''+attId+'\',\''+pid+'\')">📷 拍照识别(OCR)</button></div>'
+        : '<div class="media-bar"><button class="btn ghost sm" onclick="saveAttCap(\''+attId+'\',\''+pid+'\')">保存说明</button></div>') +
+      '<div id="ocrWrap"></div>' +
+      '<div class="media-bar" style="margin-top:10px"><button class="btn danger sm" onclick="delAttachment(\''+attId+'\',\''+pid+'\')">删除附件</button></div>';
+    openModal('<svg viewBox="0 0 24 24"><path d="M21 15l-5-5L5 21"/><path d="M5 21H3v-2"/><path d="M21 3h-2M21 3l-7 7"/></svg>附件 · '+escapeHtml(att.name||''), body, '<button class="btn ghost" onclick="closeModal()">关闭</button>');
+  });
+}
+function saveAttCap(attId, pid){
+  var v=document.getElementById('attCap').value.trim();
+  var p=getPatient(pid); if(!p) return;
+  var list=(p['附件']||[]).map(function(a){ if(a.id===attId) a.caption=v; return a; });
+  apiUpdate('patients', pid, { '附件': list }).then(function(){ toast('说明已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
+}
+function delAttachment(attId, pid){
+  idbDel(attId).catch(function(){});
+  var p=getPatient(pid); if(!p){ closeModal(); return; }
+  var list=(p['附件']||[]).filter(function(a){ return a.id!==attId; });
+  apiUpdate('patients', pid, { '附件': list }).then(function(){ closeModal(); toast('附件已删除'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
+}
+/* 拍照识别：浏览器端 Tesseract.js 中文 OCR（最佳努力，需联网；结果供核对后填入） */
+var _tessLoad=null;
+function loadTesseract(){
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (_tessLoad) return _tessLoad;
+  _tessLoad=new Promise(function(res,rej){
+    var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=function(){ res(window.Tesseract); }; s.onerror=function(){ rej(new Error('OCR 组件加载失败（需联网）')); };
+    document.head.appendChild(s);
+  });
+  return _tessLoad;
+}
+function runOCR(attId, pid){
+  toast('正在加载识别引擎，请稍候…');
+  loadTesseract().then(function(T){
+    return idbGet(attId).then(function(blob){
+      if(!blob) throw new Error('本机未找到原图（附件仅存于采集设备）');
+      var url=URL.createObjectURL(blob);
+      return T.recognize(url,'chi_sim+eng',{}).then(function(o){ URL.revokeObjectURL(url); return o.data.text; });
+    });
+  }).then(function(text){ showOcrResult(text||'', pid, attId); })
+    .catch(function(e){ toast('识别失败：'+(e.message||e), true); });
+}
+function showOcrResult(text, pid, attId){
+  var opts=CHART_FIELDS.map(function(f){ return '<option value="'+f+'">'+escapeHtml(f)+'</option>'; }).join('');
+  opts='<option value="__draft__">识别草稿（不写入病历）</option>'+opts;
+  var body='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">识别结果仅供参考，请核对后选择目标字段填入（中文识别准确率受拍摄清晰度影响）。</div>'+
+    '<textarea id="ocrText" style="min-height:170px">'+escapeHtml(text)+'</textarea>'+
+    '<div class="form-row" style="margin-top:10px"><label>填入到病历字段</label><select id="ocrField">'+opts+'</select></div>'+
+    '<div class="media-bar"><button class="btn" onclick="applyOcr(\''+pid+'\')">填入所选字段</button></div>';
+  openModal('<svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h10"/></svg>拍照识别结果（OCR）', body, '<button class="btn ghost" onclick="closeModal()">关闭</button>');
+}
+function applyOcr(pid){
+  var text=document.getElementById('ocrText').value;
+  var field=document.getElementById('ocrField').value;
+  var p=getPatient(pid); if(!p) return;
+  if (field==='__draft__'){ closeModal(); toast('已留在识别框，可手动复制'); return; }
+  var chart=p['病历']||{};
+  chart[field]=(chart[field]?chart[field]+'\n':'')+text.trim();
+  apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('已填入「'+field+'」'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
+}
+/* 病历夹区块（编辑按钮 + 附件画廊） */
+function renderChartSection(p){
+  var atts=p['附件']||[];
+  var html='<div class="card card-pad" style="margin-top:14px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 class="sec-title" style="margin:0">📁 患者病历夹（骨科）</h2>';
+  html+='<div class="media-bar" style="margin:0"><button class="btn ghost sm" onclick="openChartModal(\''+p._id+'\')">✏️ 编辑病历</button>';
+  html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'camera\')">📷 拍照</button>';
+  html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'image\')">🖼️ 图片</button>';
+  html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'video\')">🎬 视频</button></div></div>';
+  html+='<div style="font-size:12px;color:var(--muted);margin:6px 0 8px">病历文本多端同步；图片/视频本机存储，元数据同步（原文件仅存采集设备）。</div>';
+  var chart=p['病历']||{};
+  var cf=CHART_FIELDS.filter(function(f){ return chart[f]; });
+  if (cf.length) html+='<div class="chart-sum">'+cf.map(function(f){ return '<div class="cs-row"><span class="cs-k">'+escapeHtml(f)+'</span><span class="cs-v">'+escapeHtml(chart[f])+'</span></div>'; }).join('')+'</div>';
+  if (atts.length){
+    html+='<div class="gallery">';
+    atts.forEach(function(a){
+      var inner = a.type==='video' ? '<div class="thumb play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>' : '<img class="thumb-img" data-att="'+a.id+'" alt="">';
+      html+='<div class="thumb-wrap" onclick="openAttachmentModal(\''+a.id+'\',\''+p._id+'\')"><div class="thumb-box">'+inner+'</div>'+(a.caption?'<div class="thumb-cap">'+escapeHtml(a.caption)+'</div>':'')+'</div>';
+    });
+    html+='</div>';
+  } else {
+    html+='<div class="tl-empty">暂无附件，点击上方按钮拍照 / 上传图片或视频</div>';
+  }
+  html+='</div>';
+  return html;
+}
+/* 患者全景：提醒 + 病历 + 资料 合并时间轴 */
+function renderPanorama(p){
+  var items=[];
+  patientTasks(p._id).forEach(function(t){ items.push({ kind:'提醒', ksub:(t['类型']||''), date:t['计划日期']||'', title:t['阶段']||'提醒', status:t['状态']||'', content:t['内容']||'' }); });
+  var chart=p['病历']||{}; var cf=CHART_FIELDS.filter(function(f){ return chart[f]; });
+  if (cf.length) items.push({ kind:'病历', date:p['入院日期']||'', title:'骨科病历', content:cf.map(function(f){ return f+'：'+(chart[f]||''); }).join('；') });
+  (p['附件']||[]).forEach(function(a){ items.push({ kind:'资料', ksub:(a.type==='video'?'视频':'图片'), date:a.ts||'', title:a.name||'附件', content:a.caption||'' }); });
+  items.sort(function(x,y){ return (fmtDate(x.date)<fmtDate(y.date))?-1:1; });
+  var html='<div class="card card-pad" style="margin-top:14px"><h2 class="sec-title" style="margin:0 0 10px">📋 患者全景（提醒 + 资料）</h2><div class="panorama">';
+  if (!items.length){ html+='<div class="tl-empty">暂无提醒与资料</div>'; }
+  items.forEach(function(it){
+    var cls='pan-item '+(it.kind==='提醒'?'pan-task':(it.kind==='病历'?'pan-chart':'pan-media'));
+    html+='<div class="'+cls+'"><div class="pan-dot"></div><div class="pan-body"><div class="pan-top"><span class="pan-tag t-'+it.kind+'">'+ (it.kind==='提醒'?'提醒':(it.kind==='病历'?'病历':'资料')) + (it.ksub?' · '+escapeHtml(it.ksub):'') + '</span>';
+    if (it.date) html+='<span class="pan-date">'+escapeHtml(fmtDate(it.date))+'</span>';
+    if (it.status) html+=statusBadge(it.status);
+    html+='</div><div class="pan-title">'+escapeHtml(it.title)+'</div>';
+    if (it.content) html+='<div class="pan-content">'+escapeHtml(it.content)+'</div>';
+    html+='</div></div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+function loadGallery(p){
+  var ims=document.querySelectorAll('#patientDetail img.thumb-img');
+  ims.forEach(function(im){ var id=im.getAttribute('data-att'); if(id){ idbUrl(id).then(function(u){ if(u) im.src=u; }); } });
+}
+
 /* ================= 渲染：详情 ================= */
 function renderDetail(){
   if (!state.selectedPatientId) return;
@@ -1212,6 +1418,7 @@ function renderDetail(){
   var p = null;
   for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === state.selectedPatientId){ p = state.patients[i]; break; } }
   if (!p){ backToList(); return; }
+  revokeObjUrls();
 
   var day = postopDay(p);
   var dayTxt = postLabel(p) || '未登记日期';
@@ -1251,6 +1458,9 @@ function renderDetail(){
   if (p['备注']) html += '<div style="margin-top:10px;background:#fffbeb;border-radius:10px;padding:9px 12px;font-size:13.5px">📝 ' + escapeHtml(p['备注']) + '</div>';
   html += '</div>';
 
+  // 患者全景：提醒 + 病历 + 资料 合并展开
+  html += renderPanorama(p);
+
   // 板块一：住院提醒
   html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>板块一 · 住院期间提醒</h2>';
   html += '<div class="timeline">';
@@ -1285,8 +1495,12 @@ function renderDetail(){
     html += '<div class="tl-empty">暂无随访记录</div>';
   }
 
+  // 患者病历夹（骨科病历 + 图片/视频附件）
+  html += renderChartSection(p);
+
   el.innerHTML = html;
   el.style.display = 'block';
+  loadGallery(p);
   window.scrollTo(0, 0);
 }
 function infoCell(k, v){ return '<div class="info-cell"><div class="k">' + escapeHtml(k) + '</div><div class="v">' + escapeHtml(v) + '</div></div>'; }
