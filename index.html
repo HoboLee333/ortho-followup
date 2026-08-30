@@ -1318,43 +1318,132 @@ function delAttachment(attId, pid){
   var list=(p['附件']||[]).filter(function(a){ return a.id!==attId; });
   apiUpdate('patients', pid, { '附件': list }).then(function(){ closeModal(); toast('附件已删除'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
 }
-/* 拍照识别：浏览器端 Tesseract.js 中文 OCR（最佳努力，需联网；结果供核对后填入） */
+/* 拍照识别：浏览器端 Tesseract.js 中文 OCR
+   - 引擎脚本多 CDN 回退（fastly.jsdelivr / jsdelivr / unpkg / npmmirror）
+   - 中文语言包走 fastly.jsdelivr（实测可达，约 1.7MB）
+   - 进度实时显示；中英混合失败自动降级纯中文；失败/超时降级「手动粘贴录入」，保证录入流程不中断 */
 var _tessLoad=null;
+var TESS_SRCS=[
+  'https://fastly.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+  'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
+  'https://registry.npmmirror.com/tesseract.js/5/files/dist/tesseract.min.js'
+];
+/* 语言包源（浏览器实测：cdn.jsdelivr 可达；fastly 可作备用；unpkg 兜底） */
+var TESS_LANG_BASES=[
+  'https://cdn.jsdelivr.net/npm/',
+  'https://fastly.jsdelivr.net/npm/',
+  'https://unpkg.com/'
+];
+var TESS_LANG_BASE=TESS_LANG_BASES[0];
+var TESS_STATUS={
+  'loading tesseract core':'加载识别引擎',
+  'initializing tesseract':'初始化引擎',
+  'initialized tesseract':'引擎就绪',
+  'loading language traineddata':'下载中文识别包（首次约 2-5 分钟，之后自动缓存、识别秒开）',
+  'loaded language traineddata':'语言包就绪',
+  'initializing api':'初始化识别接口',
+  'initialized api':'接口就绪',
+  'recognizing text':'正在识别文字'
+};
+function loadScriptSrc(src){
+  return new Promise(function(res,rej){
+    var s=document.createElement('script'); s.src=src; s.charset='utf-8';
+    s.onload=function(){ res(); }; s.onerror=function(){ rej(new Error('无法加载 '+src)); };
+    document.head.appendChild(s);
+  });
+}
 function loadTesseract(){
   if (window.Tesseract) return Promise.resolve(window.Tesseract);
   if (_tessLoad) return _tessLoad;
-  _tessLoad=new Promise(function(res,rej){
-    var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    s.onload=function(){ res(window.Tesseract); }; s.onerror=function(){ rej(new Error('OCR 组件加载失败（需联网）')); };
-    document.head.appendChild(s);
-  });
+  var i=0;
+  var tryNext=function(){
+    if (i>=TESS_SRCS.length) return Promise.reject(new Error('OCR 组件加载失败：所有 CDN 均不可达，请检查网络后重试'));
+    var src=TESS_SRCS[i++];
+    return loadScriptSrc(src).then(function(){
+      if (!window.Tesseract) throw new Error('Tesseract 未初始化');
+      return window.Tesseract;
+    }).catch(function(){ return tryNext(); });
+  };
+  _tessLoad=tryNext().catch(function(e){ _tessLoad=null; throw e; });
   return _tessLoad;
 }
+function tessLangPath(lang){ return TESS_LANG_BASE+'@tesseract.js-data/'+lang+'@1.0.0/4.0.0_best_int'; }
+function ocrProgress(txt, pct){
+  var wrap=document.getElementById('ocrWrap');
+  if (!wrap){ toast(txt); return; }
+  var bar=(typeof pct==='number' && pct>0)
+    ? '<div style="background:#eef2ff;border-radius:999px;height:8px;overflow:hidden;margin-top:8px"><i style="display:block;height:100%;background:var(--primary);width:'+Math.round(pct*100)+'%"></i></div>'
+    : '';
+  wrap.innerHTML='<div style="font-size:13px;color:var(--muted);margin-top:10px">⏳ '+escapeHtml(txt)+'</div>'+bar;
+}
 function runOCR(attId, pid){
-  toast('正在加载识别引擎，请稍候…');
+  ocrProgress('正在加载识别引擎…', 0);
   loadTesseract().then(function(T){
     return idbGet(attId).then(function(blob){
       if(!blob) throw new Error('本机未找到原图（附件仅存于采集设备）');
       var url=URL.createObjectURL(blob);
-      return T.recognize(url,'chi_sim+eng',{}).then(function(o){ URL.revokeObjectURL(url); return o.data.text; });
+      var li=0;
+      var attempt=function(){
+        TESS_LANG_BASE=TESS_LANG_BASES[li]||TESS_LANG_BASES[0];
+        var langs=(li===0)?'chi_sim+eng':'chi_sim';
+        var opts={
+          langPath: tessLangPath,
+          logger: function(m){
+            if(!m) return;
+            var label=TESS_STATUS[m.status]||m.status||'处理中';
+            ocrProgress(label+'（识别源 '+(li+1)+'/'+TESS_LANG_BASES.length+'）', (typeof m.progress==='number')?m.progress:0);
+          }
+        };
+        return withTimeout(T.recognize(url,langs,opts), 300000)
+          .then(function(o){ URL.revokeObjectURL(url); return (o&&o.data&&o.data.text)||''; })
+          .catch(function(e){
+            li++;
+            if (li<TESS_LANG_BASES.length){ ocrProgress('当前识别源不可用，切换备用源重试…',0); return attempt(); }
+            URL.revokeObjectURL(url);
+            throw e;
+          });
+      };
+      return attempt().catch(function(e){
+        throw new Error(e && /timeout/i.test(e.message||'') ? '识别超时，请改用手动录入或稍后重试' : (e.message||e));
+      });
     });
-  }).then(function(text){ showOcrResult(text||'', pid, attId); })
-    .catch(function(e){ toast('识别失败：'+(e.message||e), true); });
+  }).then(function(text){ showOcrResult(text, pid, attId); })
+    .catch(function(e){ showOcrFallback(e, pid, attId); });
 }
-function showOcrResult(text, pid, attId){
-  var opts=CHART_FIELDS.map(function(f){ return '<option value="'+f+'">'+escapeHtml(f)+'</option>'; }).join('');
-  opts='<option value="__draft__">识别草稿（不写入病历）</option>'+opts;
-  var body='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">识别结果仅供参考，请核对后选择目标字段填入（中文识别准确率受拍摄清晰度影响）。</div>'+
-    '<textarea id="ocrText" style="min-height:170px">'+escapeHtml(text)+'</textarea>'+
+function ocrResultUI(text, pid, noteHtml){
+  var opts='<option value="__draft__">识别草稿（不写入病历）</option>'+
+    CHART_FIELDS.map(function(f){ return '<option value="'+f+'">'+escapeHtml(f)+'</option>'; }).join('');
+  return '<div style="font-size:12px;color:var(--muted);margin:10px 0 6px">'+noteHtml+'</div>'+
+    '<textarea id="ocrText" style="min-height:170px" placeholder="识别结果将显示在这里，也可手动粘贴或输入文字">'+escapeHtml(text||'')+'</textarea>'+
     '<div class="form-row" style="margin-top:10px"><label>填入到病历字段</label><select id="ocrField">'+opts+'</select></div>'+
     '<div class="media-bar"><button class="btn" onclick="applyOcr(\''+pid+'\')">填入所选字段</button></div>';
-  openModal('<svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h10"/></svg>拍照识别结果（OCR）', body, '<button class="btn ghost" onclick="closeModal()">关闭</button>');
+}
+function showOcrResult(text, pid, attId){
+  var ui=ocrResultUI(text, pid, '识别结果仅供参考，请核对后选择目标字段填入（中文识别准确率受拍摄清晰度影响）。');
+  var wrap=document.getElementById('ocrWrap');
+  if (wrap){ wrap.innerHTML=ui; toast('识别完成 · 识别包已缓存，下次秒开'); return; }
+  openModal('<svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h10"/></svg>拍照识别结果（OCR）', ui, '<button class="btn ghost" onclick="closeModal()">关闭</button>');
+}
+function showOcrFallback(e, pid, attId){
+  var msg=(e&&e.message)?e.message:String(e||'未知错误');
+  var note='<b style="color:var(--danger)">自动识别失败：'+escapeHtml(msg)+'</b><br>'+
+    '可直接手动录入：用手机相册自带的「提取文字」或微信识别后复制，粘贴到下方文本框，再选择字段填入病历。';
+  var ui=ocrResultUI('', pid, note);
+  var wrap=document.getElementById('ocrWrap');
+  if (wrap){ wrap.innerHTML=ui; }
+  else { openModal('<svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h10"/></svg>拍照识别（手动录入）', ui, '<button class="btn ghost" onclick="closeModal()">关闭</button>'); }
+  toast('自动识别失败，可手动粘贴文字', true);
 }
 function applyOcr(pid){
-  var text=document.getElementById('ocrText').value;
-  var field=document.getElementById('ocrField').value;
+  var el=document.getElementById('ocrText');
+  var fld=document.getElementById('ocrField');
+  if (!el || !fld) return;
+  var text=el.value;
+  var field=fld.value;
   var p=getPatient(pid); if(!p) return;
-  if (field==='__draft__'){ closeModal(); toast('已留在识别框，可手动复制'); return; }
+  if (field==='__draft__'){ toast('已留在识别框，可手动复制'); return; }
+  if (!text.trim()){ toast('请先输入或粘贴文字', true); return; }
   var chart=p['病历']||{};
   chart[field]=(chart[field]?chart[field]+'\n':'')+text.trim();
   apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('已填入「'+field+'」'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
@@ -2363,6 +2452,12 @@ window.applyOcr = applyOcr;
 window.loadGallery = loadGallery;
 window.state = state;
 window.renderDetail = renderDetail;
+window.loadTesseract = loadTesseract;
+window.tessLangPath = tessLangPath;
+window.idbPut = idbPut;
+window.idbGet = idbGet;
+window.showOcrResult = showOcrResult;
+window.showOcrFallback = showOcrFallback;
 
 })();
 </script>
