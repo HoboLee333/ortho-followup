@@ -1172,6 +1172,7 @@ function isSurgical(p){ return !!(p['手术日期']); }
 
 /* ================= 渲染：今日 ================= */
 function renderAll(){
+  normalizePatientStatus();
   renderStats();
   renderToday();
   renderInpatient();
@@ -1179,6 +1180,19 @@ function renderAll(){
   renderDetail();
   renderTemplates();
   updateNavCnt();
+}
+/* 历史数据兜底：旧版本建档未写「状态」字段，导致患者从住院/随访列表消失。
+   无状态患者按 出院日期有无 补 随访中/住院中（只写一次，之后不再触发）。 */
+function normalizePatientStatus(){
+  var changed = false;
+  state.patients.forEach(function(p){
+    if (p && !p['状态']){
+      p['状态'] = p['出院日期'] ? '随访中' : '住院中';
+      changed = true;
+      apiUpdate('patients', p._id, { '状态': p['状态'], '更新时间': state.today });
+    }
+  });
+  return changed;
 }
 function renderStats(){
   var inN = 0, fuN = 0;
@@ -1416,6 +1430,7 @@ function patientCardHtml(p, mode){
   if (mode === 'in' && p['状态'] === '住院中'){
     html += '<div style="margin-top:10px;display:flex;gap:8px">';
     html += '<button class="btn ok sm" style="flex:1" onclick="event.stopPropagation();dischargePatient(\'' + p._id + '\')">办理出院 → 进入板块二</button>';
+    html += '<button class="btn ghost sm" onclick="event.stopPropagation();openAddRecordModal(\'' + p._id + '\',\'住院\')">📝 记一笔</button>';
     html += '<button class="btn ghost sm" onclick="event.stopPropagation();openPatientDetail(\'' + p._id + '\')">查看详情</button>';
     html += '</div>';
   }
@@ -1874,7 +1889,7 @@ function renderDetail(){
     html += '<button class="btn ok sm" onclick="dischargePatient(\'' + p._id + '\')">办理出院 → 进入板块二</button>';
   }
   html += '<button class="btn ghost sm" onclick="openEditPatientModal(\'' + p._id + '\')">编辑</button>';
-  html += '<button class="btn ghost sm" onclick="openAddRecordModal(\'' + p._id + '\')">记随访</button>';
+  html += '<button class="btn ghost sm" onclick="openAddRecordModal(\'' + p._id + '\',\'' + (p['状态'] === '住院中' ? '住院' : '') + '\')">记随访</button>';
   if (p['状态'] === '随访中') html += '<button class="btn ghost sm" onclick="closePatient(\'' + p._id + '\')">结案</button>';
   else if (p['状态'] === '已结案') html += '<button class="btn ghost sm" onclick="reopenPatient(\'' + p._id + '\')">恢复随访</button>';
   html += '<button class="btn danger sm" onclick="deletePatient(\'' + p._id + '\')">删除</button>';
@@ -1907,7 +1922,8 @@ function renderDetail(){
   html += renderPanorama(p);
 
   // 板块一：住院提醒
-  html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>板块一 · 住院期间提醒</h2>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 class="sec-title"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>板块一 · 住院期间提醒</h2>';
+  html += '<button class="btn ghost sm" onclick="openAddTaskModal(\'' + p._id + '\',\'住院提醒\')">+ 添加提醒</button></div>';
   html += '<div class="timeline">';
   if (inTasks.length){
     inTasks.forEach(function(t){ html += tlItemHtml(t, p); });
@@ -1917,7 +1933,8 @@ function renderDetail(){
   html += '</div>';
 
   // 板块二：随访计划
-  html += '<h2 class="sec-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 15h6M12 12v6"/></svg>板块二 · 出院随访计划' + (fuTasks.length ? '（' + fuTasks.filter(function(t){return t['状态']==='待处理';}).length + ' 项待处理）' : '') + '</h2>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 class="sec-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 15h6M12 12v6"/></svg>板块二 · 出院随访计划' + (fuTasks.length ? '（' + fuTasks.filter(function(t){return t['状态']==='待处理';}).length + ' 项待处理）' : '') + '</h2>';
+  html += '<button class="btn ghost sm" onclick="openAddTaskModal(\'' + p._id + '\',\'随访节点\')">+ 添加提醒</button></div>';
   html += '<div class="timeline">';
   if (fuTasks.length){
     fuTasks.forEach(function(t){ html += tlItemHtml(t, p); });
@@ -1966,7 +1983,10 @@ function tlItemHtml(t, p){
   }
   if (t['状态'] === '待处理'){
     html += '<div class="tl-actions"><button class="btn ok sm" onclick="openTaskModal(\'' + t._id + '\')">处理</button>';
-    html += '<button class="btn ghost sm" onclick="skipTask(\'' + t._id + '\')">跳过</button></div>';
+    html += '<button class="btn ghost sm" onclick="skipTask(\'' + t._id + '\')">跳过</button>';
+    html += '<button class="btn ghost sm" onclick="openEditTaskModal(\'' + t._id + '\')">编辑</button></div>';
+  } else {
+    html += '<div class="tl-actions"><button class="btn ghost sm" onclick="openEditTaskModal(\'' + t._id + '\')">编辑</button></div>';
   }
   html += '</div></div>';
   return html;
@@ -2211,6 +2231,7 @@ function savePatient(isEdit){
     '病历字段集': (document.getElementById('fFieldset') ? document.getElementById('fFieldset').value : '') || null,
     '主治医师': document.getElementById('fDoc').value.trim(),
     '备注': document.getElementById('fNote').value.trim(),
+    '状态': document.getElementById('fOutDate').value ? '随访中' : '住院中',
     '更新时间': state.today
   };
   if (isEdit){
@@ -2258,12 +2279,18 @@ function autoFillDiag(){
   var diag = document.getElementById('fDiag');
   if (d && !diag.value){ diag.placeholder = '如：右股骨颈骨折（已登记手术日期）'; }
 }
-function genTasksFromTemplates(pid, patient, category){
+function genTasksFromTemplates(pid, patient, category, bases){
   var tpls = state.templates.filter(function(t){ return t['类别'] === category; })
     .sort(function(a,b){ return (a['排序']||0) - (b['排序']||0); });
+  if (bases && bases.length) tpls = tpls.filter(function(t){ return bases.indexOf(t['基准']) >= 0; });
   if (!tpls.length) return Promise.resolve();
+  /* 判重：同患者已存在同类型同阶段节点则跳过（支持出院后按更新后的模板补生成） */
+  var exist = {};
+  patientTasks(pid).forEach(function(t){ exist[(t['类型'] || '') + '|' + (t['阶段'] || '')] = true; });
   var adds = [];
   tpls.forEach(function(t){
+    var type = category === '随访节点' ? '随访节点' : '住院提醒';
+    if (exist[type + '|' + (t['名称'] || '未命名')]) return;
     var base = null;
     if (t['基准'] === '入院日') base = patient['入院日期'];
     else if (t['基准'] === '手术日') base = patient['手术日期'];
@@ -2273,7 +2300,7 @@ function genTasksFromTemplates(pid, patient, category){
     adds.push({
       '患者ID': pid,
       '患者姓名': patient['姓名'],
-      '类型': category === '随访节点' ? '随访节点' : '住院提醒',
+      '类型': type,
       '事项类型': t['事项类型'] || '其他备注',
       '阶段': t['名称'] || '未命名',
       '计划日期': addDays(fmtDate(base), off),
@@ -2293,10 +2320,6 @@ function dischargePatient(pid){
   for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
   if (!p) return;
   var existing = patientTasks(pid, '随访节点');
-  if (existing.length){
-    toast('该患者已生成过随访计划（' + existing.length + ' 个节点），请勿重复办理', true);
-    return;
-  }
   var surgical = isSurgical(p);
   var tpls = state.templates.filter(function(t){
     if (t['类别'] !== '随访节点') return false;
@@ -2324,32 +2347,46 @@ function dischargePatient(pid){
       return;
     }
   }
+  /* 按阶段判重，算出缺失节点（模板库后续更新也可补生成） */
+  var haveStage = {};
+  existing.forEach(function(t){ haveStage[t['阶段'] || ''] = true; });
+  var missing = tpls.filter(function(t){ return !haveStage[t['名称'] || '']; });
+  if (!missing.length){
+    toast('随访节点已全部存在（' + existing.length + ' 个），无需补生成', true);
+    return;
+  }
+  var isRegen = existing.length > 0;
+  var disDefault = fmtDate(p['出院日期']) || state.today;
   var baseInfo = surgical
     ? ('手术日 ' + escapeHtml(fmtDate(p['手术日期'])))
-    : (p['出院日期'] ? ('出院日 ' + escapeHtml(fmtDate(p['出院日期']))) : ('出院日 ' + state.today + '（今日，自动记录）'));
+    : ('出院日 ' + escapeHtml(disDefault) + (p['出院日期'] ? '' : '（默认今日，可修改）'));
   openModal(
-    '<svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/></svg>办理出院',
-    '<div style="font-size:14px;color:#374151">患者 <b>' + escapeHtml(p['姓名']) + '</b>（' + baseInfo + '，' + escapeHtml(postLabel(p) || '—') + '）<br><br>' +
-    '将按「随访节点」模板（' + (surgical ? '手术患者' : '非手术/保守治疗') + '，共 <b>' + tpls.length + '</b> 个节点）以 <b>' + (surgical ? '手术日' : '出院日') + '为基准</b> 自动生成随访计划，患者状态变为「随访中」。<br><br>确定办理出院？</div>',
-    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn ok" onclick="doDischarge(\'' + pid + '\')">确认出院</button>'
+    '<svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/></svg>' + (isRegen ? '补生成随访节点' : '办理出院'),
+    '<div class="form-row"><label>出院日期</label><input type="date" id="disDate" value="' + escapeHtml(disDefault) + '"></div>' +
+    '<div style="font-size:14px;color:#374151;margin-top:4px">患者 <b>' + escapeHtml(p['姓名']) + '</b>（' + baseInfo + '，' + escapeHtml(postLabel(p) || '—') + '）<br><br>' +
+    (isRegen
+      ? '该患者已有 <b>' + existing.length + '</b> 个随访节点，本次按模板<b>补生成缺失的 ' + missing.length + ' 个</b>（已有节点不受影响）。'
+      : '将按「随访节点」模板（' + (surgical ? '手术患者' : '非手术/保守治疗') + '，共 <b>' + missing.length + '</b> 个节点）以 <b>' + (surgical ? '手术日' : '出院日') + '</b> 为基准自动生成随访计划，患者状态变为「随访中」。') +
+    '<br><br>确定' + (isRegen ? '补生成' : '办理出院') + '？</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn ok" onclick="doDischarge(\'' + pid + '\')">' + (isRegen ? '确认补生成' : '确认出院') + '</button>'
   );
 }
 function doDischarge(pid){
   var p = null;
   for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
   if (!p) return;
+  var disDate = (document.getElementById('disDate') || {}).value || '';
+  if (!disDate){ toast('请选择出院日期', true); return; }
   closeModal();
+  var isRegen = patientTasks(pid, '随访节点').length > 0;
   var p2 = {};
   for (var kk in p){ if (p.hasOwnProperty(kk)) p2[kk] = p[kk]; }
-  if (!p2['出院日期']) p2['出院日期'] = state.today;
-  var genP = genTasksFromTemplates(pid, p2, '随访节点');
-  if (!p['出院日期']){
-    genP = genP.then(function(){ return apiUpdate('patients', pid, { '出院日期': state.today }); });
-  }
-  genP.then(function(){
-    return apiUpdate('patients', pid, { '状态': '随访中', '更新时间': state.today });
+  p2['出院日期'] = disDate; /* 用户选定/修正的出院日期，作为出院日基准 */
+  /* 手术患者只用「手术日」基准模板；非手术患者用「出院日/入院日」基准（避免混入非手术节点） */
+  genTasksFromTemplates(pid, p2, '随访节点', isSurgical(p) ? ['手术日'] : ['出院日', '入院日']).then(function(){
+    return apiUpdate('patients', pid, { '出院日期': disDate, '状态': '随访中', '更新时间': state.today });
   }).then(function(){
-    toast('已办理出院，已进入板块二 · 出院随访');
+    toast(isRegen ? '已补生成缺失的随访节点' : '已办理出院，已进入板块二 · 出院随访');
     refreshAll().then(function(){
       state.selectedPatientId = pid;
       switchView('outpatient');
@@ -2438,6 +2475,7 @@ function openTaskModal(taskId){
     '<div class="form-row"><label>随访记录 / 处理结果</label><textarea id="taskResult" placeholder="记录患者反馈、处理措施、下次安排…"></textarea></div>' +
     '<div class="form-row"><label>快速填入内容模板</label><select id="tplPick" onchange="pickTemplate(this)">' + tplOptions + '</select></div>',
     '<button class="btn ghost" onclick="closeModal()">取消</button>' +
+    '<button class="btn ghost" onclick="openEditTaskModal(\'' + t._id + '\')">编辑</button>' +
     '<button class="btn ghost" onclick="skipTask(\'' + t._id + '\', true)">跳过</button>' +
     '<button class="btn ok" onclick="completeTask(\'' + t._id + '\')">标记完成</button>'
   );
@@ -2487,16 +2525,89 @@ function skipTask(taskId, fromModal){
   });
 }
 
+/* ================= 手动添加 / 编辑提醒（模板之外的临时节点） ================= */
+var TASK_TYPES = ['住院提醒', '随访节点'];
+var TASK_EVTS = ['用药提醒', '康复提醒', '复查提醒', '其他备注'];
+function taskFormHtml(t){
+  t = t || {};
+  return '<div class="form-grid">' +
+    '<div class="form-row"><label>类型</label><select id="tkType">' + TASK_TYPES.map(function(x){ return '<option value="' + x + '"' + (t['类型'] === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></div>' +
+    '<div class="form-row"><label>事项类型</label><select id="tkEvt">' + TASK_EVTS.map(function(x){ return '<option' + (t['事项类型'] === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></div>' +
+    '</div>' +
+    '<div class="form-row"><label>阶段 / 标题 <span class="req">*</span></label><input type="text" id="tkStage" value="' + escapeHtml(t['阶段'] || '') + '" placeholder="如：术后第2天 抗凝治疗 / 明天找家属谈话"></div>' +
+    '<div class="form-row"><label>计划日期 <span class="req">*</span></label><input type="date" id="tkDate" value="' + escapeHtml(fmtDate(t['计划日期']) || state.today) + '"></div>' +
+    '<div class="form-row"><label>内容</label><textarea id="tkContent" placeholder="提醒的具体内容">' + escapeHtml(t['内容'] || '') + '</textarea></div>';
+}
+function openAddTaskModal(pid, presetType){
+  var p = findPatient(pid, null); if (!p) return;
+  var preset = presetType || (p['状态'] === '住院中' ? '住院提醒' : '随访节点');
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加提醒',
+    '<div style="font-size:14px;color:#374151;margin-bottom:12px">患者：<b>' + escapeHtml(p['姓名']) + '</b>（手动添加，不影响模板）</div>' +
+    taskFormHtml({ '类型': preset }),
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveAddTask(\'' + pid + '\')">添加</button>'
+  );
+}
+function saveAddTask(pid){
+  var stage = document.getElementById('tkStage').value.trim();
+  var date = document.getElementById('tkDate').value;
+  if (!stage){ toast('请填写阶段/标题', true); return; }
+  if (!date){ toast('请选择计划日期', true); return; }
+  var p = findPatient(pid, null);
+  apiAdd('tasks', {
+    '患者ID': pid,
+    '患者姓名': p ? p['姓名'] : '',
+    '类型': document.getElementById('tkType').value,
+    '事项类型': document.getElementById('tkEvt').value,
+    '阶段': stage,
+    '计划日期': date,
+    '内容': document.getElementById('tkContent').value.trim(),
+    '状态': '待处理',
+    '更新时间': state.today
+  }).then(function(){
+    closeModal(); toast('提醒已添加');
+    refreshAll().then(function(){ if (state.selectedPatientId === pid) renderDetail(); });
+  });
+}
+function openEditTaskModal(tid){
+  var t = null;
+  for (var i = 0; i < state.tasks.length; i++){ if (state.tasks[i]._id === tid){ t = state.tasks[i]; break; } }
+  if (!t) return;
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M11 4H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2v-4"/><path d="M18.4 2.6a2 2 0 013 3L12 15l-4 1 1-4z"/></svg>编辑提醒',
+    '<div style="font-size:14px;color:#374151;margin-bottom:12px">患者：<b>' + escapeHtml(t['患者姓名'] || '') + '</b>　当前状态：' + escapeHtml(t['状态'] || '') + '（编辑不改变状态与处理记录）</div>' +
+    taskFormHtml(t),
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveEditTask(\'' + tid + '\')">保存</button>'
+  );
+}
+function saveEditTask(tid){
+  var stage = document.getElementById('tkStage').value.trim();
+  var date = document.getElementById('tkDate').value;
+  if (!stage){ toast('请填写阶段/标题', true); return; }
+  if (!date){ toast('请选择计划日期', true); return; }
+  apiUpdate('tasks', tid, {
+    '类型': document.getElementById('tkType').value,
+    '事项类型': document.getElementById('tkEvt').value,
+    '阶段': stage,
+    '计划日期': date,
+    '内容': document.getElementById('tkContent').value.trim(),
+    '更新时间': state.today
+  }).then(function(){
+    closeModal(); toast('提醒已更新');
+    refreshAll().then(function(){ if (state.selectedPatientId) renderDetail(); });
+  });
+}
+
 /* ================= 随访记录 ================= */
-function openAddRecordModal(pid){
+function openAddRecordModal(pid, presetType){
   var p = null;
   for (var i = 0; i < state.patients.length; i++){ if (state.patients[i]._id === pid){ p = state.patients[i]; break; } }
   if (!p) return;
   openModal(
-    '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15h6M9 12h3"/></svg>新增随访记录',
+    '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 15h6M9 12h3"/></svg>记一笔',
     '<div style="font-size:14px;color:#374151;margin-bottom:12px">患者：<b>' + escapeHtml(p['姓名']) + '</b></div>' +
     '<div class="form-grid">' +
-    '<div class="form-row"><label>类型</label><select id="rType"><option value="随访" selected>随访</option><option value="住院">住院</option></select></div>' +
+    '<div class="form-row"><label>类型</label><select id="rType"><option value="随访"' + (presetType !== '住院' ? ' selected' : '') + '>随访</option><option value="住院"' + (presetType === '住院' ? ' selected' : '') + '>住院</option></select></div>' +
     '<div class="form-row"><label>日期</label><input type="date" id="rDate" value="' + state.today + '"></div>' +
     '</div>' +
     '<div class="form-row"><label>内容</label><input type="text" id="rContent" placeholder="如：术后3月电话随访"></div>' +
@@ -2973,6 +3084,10 @@ window.reopenPatient = reopenPatient;
 window.openTaskModal = openTaskModal;
 window.completeTask = completeTask;
 window.skipTask = skipTask;
+window.openAddTaskModal = openAddTaskModal;
+window.saveAddTask = saveAddTask;
+window.openEditTaskModal = openEditTaskModal;
+window.saveEditTask = saveEditTask;
 window.pickTemplate = pickTemplate;
 window.openAddRecordModal = openAddRecordModal;
 window.saveRecord = saveRecord;
