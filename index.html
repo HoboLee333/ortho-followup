@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <!-- 本工作台通过 WorkBuddy 资料库能力（library skill）搭建、存储和部署 -->
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<html lang="zh-CN" data-page-node-id="ygQuyxjUGHDRUwwGOjd6m0">
+<head data-page-node-id="xfPn1Uta616TS1FbjIlgts">
+<meta charset="UTF-8" data-page-node-id="NkcQh5TGOLqBM5yzEZUqv2">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" data-page-node-id="zL5wQ6ExnBR6XuJfSzJiS8">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="骨科随访">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>骨科随访工作台</title>
 <style>
 :root{
@@ -294,6 +301,25 @@ h2.sec-title svg{width:18px;height:18px;stroke:var(--primary);fill:none;stroke-w
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.warn{background:var(--warn)}
 
+/* ===== 全局搜索 ===== */
+.gsearch{position:fixed;inset:0;background:var(--bg);z-index:150;display:none;flex-direction:column}
+.gsearch.show{display:flex}
+.gs-head{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top));background:#fff;border-bottom:1px solid var(--border)}
+.gs-input-wrap{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
+.gs-input-wrap svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;flex:0 0 auto}
+.gs-input-wrap input{flex:1;border:none;background:none;outline:none;font-size:16px;min-width:0}
+.gs-close{font-size:15px;color:var(--muted);padding:8px 4px;flex:0 0 auto}
+.gs-results{flex:1;overflow-y:auto;padding:12px;width:100%;max-width:960px;margin:0 auto}
+.gs-group-title{font-size:12px;color:var(--muted);margin:14px 2px 8px;font-weight:700}
+.gs-group-title:first-child{margin-top:2px}
+.gs-item{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#fff;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer}
+.gs-item:active{background:var(--primary-weak)}
+.gs-item .gs-k{flex:0 0 auto;font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--primary-weak);color:var(--primary);font-weight:600}
+.gs-item .gs-t{flex:1;min-width:0}
+.gs-item .gs-t b{font-size:14px;font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gs-item .gs-t span{font-size:12px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
+
 /* ===== Empty ===== */
 .empty{text-align:center;padding:36px 16px;color:var(--muted)}
 .empty svg{width:52px;height:52px;stroke:#cbd5e1;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:10px}
@@ -360,179 +386,194 @@ h2.sec-title svg{width:18px;height:18px;stroke:var(--primary);fill:none;stroke-w
 
 </style>
 </head>
-<body>
+<body data-page-node-id="bmDyOxnMbp9wM2yKaC6NOs">
 
 <!-- 模式提示条 -->
-<div class="mode-banner" id="modeBanner" style="display:none">
-  <div class="mode-banner-inner">
-    <span class="mb-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
-    <span class="mb-text"><b>当前为本地保存模式</b> · 数据保存在本设备浏览器中。建议定期「导出备份」防丢失。如需多设备实时同步，<a onclick="showCloudTip()">了解云端模式</a>。</span>
-    <button class="mb-close" onclick="dismissBanner()" aria-label="关闭">×</button>
+<div class="mode-banner" id="modeBanner" style="display:none" data-page-node-id="93dhJTdToIiraioS3vvg3d">
+  <div class="mode-banner-inner" data-page-node-id="y7n9KShpVAHzgwjlhgqldf">
+    <span class="mb-ico" data-page-node-id="CGfh9lvK6v9AjeoRyyd5Ca"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="Bbo2M0aFB6v5YVnHG5Bruv"><ellipse cx="12" cy="5" rx="9" ry="3" data-page-node-id="B7l6R9qhSj5tGMO7umZoha"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" data-page-node-id="AEguHdytml6pO8kG3B10RD"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" data-page-node-id="YptfvoisQVm31vfk8XAm1B"/></svg></span>
+    <span class="mb-text" data-page-node-id="4jLMGAGViXjUaEahV8ygEG"><b data-page-node-id="EKc04xnoFHdFN4wA2eYd4X">当前为本地保存模式</b> · 数据保存在本设备浏览器中。建议定期「导出备份」防丢失。如需多设备实时同步，<a onclick="showCloudTip()" data-page-node-id="XBtwwP7SsQwCGTtJgVhjaK">了解云端模式</a>。</span>
+    <button class="mb-close" onclick="dismissBanner()" aria-label="关闭" data-page-node-id="E6HdKkvKpq9lR3KkSfomtr">×</button>
   </div>
 </div>
 
-<header>
-  <div class="header-inner">
-    <div class="logo">
-      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+<header data-page-node-id="bYEAe5FJ2RJl3SyblKq1KL">
+  <div class="header-inner" data-page-node-id="uHuOn1VNwjSUB1Q2dduAgd">
+    <div class="logo" data-page-node-id="bYPxpIT8FhUlZ8DyBHBuc5">
+      <svg viewBox="0 0 24 24" data-page-node-id="hgkTkPXTTxxOQfAHvKVPnG"><path d="M3 21h18" data-page-node-id="myCUf3oo3f13QKj1EawFB4"/><path d="M5 21V8l7-5 7 5v13" data-page-node-id="V5OrE2Aa4Rh9rDG9oOzRGt"/><path d="M9 21v-6h6v6" data-page-node-id="eP9GxWs4PFTEBpIYLGJXUJ"/><path d="M9 11h.01M15 11h.01" data-page-node-id="lZln5qcKQG54Zj98WzjRtx"/></svg>
     </div>
-    <div class="h-title">
-      <h1>骨科随访工作台</h1>
-      <p id="headerSub">本地保存模式（单设备）</p>
+    <div class="h-title" data-page-node-id="Bb4jsKDS7N5DpHFi0TlJ9F">
+      <h1 data-page-node-id="WkFqg1A411XCQYRBrAtmJQ">骨科随访工作台</h1>
+      <p id="headerSub" data-page-node-id="JgccBkVl5mx44vp6Vwdojd">本地保存模式（单设备）</p>
     </div>
-    <div class="sync-badge" id="syncBadge"><span class="dot"></span><span id="syncText">同步中</span></div>
-    <button class="sync-btn" onclick="openSyncSettings()" title="同步设置（GitHub 云端）" aria-label="同步设置">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <div class="sync-badge" id="syncBadge" data-page-node-id="JZPZxSyRYvZAhERjGy2Jk8"><span class="dot" data-page-node-id="xtkyeWlu4oYNx6YELzk4z1"></span><span id="syncText" data-page-node-id="gXteGXWxtnbom5GikBK7Ys">同步中</span></div>
+    <button class="sync-btn" onclick="openGlobalSearch()" title="全局搜索" aria-label="全局搜索">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+    <button class="sync-btn" onclick="openSyncSettings()" title="同步设置（GitHub 云端）" aria-label="同步设置" data-page-node-id="GTgrQ2KsF6kFdj2u3V2CFU">
+      <svg viewBox="0 0 24 24" data-page-node-id="PlwFjHHyn6vcY1ABXqV5tZ"><circle cx="12" cy="12" r="3" data-page-node-id="G6HPLS02WPTSy55K8EqRJb"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" data-page-node-id="Gu48tB7zACdVOrWeBjbGnP"/></svg>
     </button>
   </div>
 </header>
 
-<nav>
-  <div class="nav-inner">
-    <button class="nav-btn active" data-view="today" onclick="switchView('today')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14l1.5 1.5L16 13"/></svg>
-      今日要处理 <span class="cnt" id="navTodayCnt">0</span>
+<nav data-page-node-id="WXzQu8JTqxeZzl1Z89IlPu">
+  <div class="nav-inner" data-page-node-id="O0FtPG07gkSDPFMhJXK6c9">
+    <button class="nav-btn active" data-view="today" onclick="switchView('today')" data-page-node-id="EJxDHvfDegKiLFSEAYsRqM">
+      <svg viewBox="0 0 24 24" data-page-node-id="nenRDzyJfWpzZusGFOu1mh"><rect x="3" y="4" width="18" height="18" rx="2" data-page-node-id="OIWTlMfMK0j2EJZ0o7t2Wl"/><path d="M16 2v4M8 2v4M3 10h18" data-page-node-id="8GlvY5k6BWrFCHkig5BlGL"/><path d="M12 14l1.5 1.5L16 13" data-page-node-id="H6AXgmCzzOZgLWac9o8Ba1"/></svg>
+      今日要处理 <span class="cnt" id="navTodayCnt" data-page-node-id="06D1uLQCaYF3iAPH6CK3Sc">0</span>
     </button>
-    <button class="nav-btn" data-view="inpatient" onclick="switchView('inpatient')">
-      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+    <button class="nav-btn" data-view="inpatient" onclick="switchView('inpatient')" data-page-node-id="ANqPIRK9uIJPqql61I97ZZ">
+      <svg viewBox="0 0 24 24" data-page-node-id="8rCBY7JANAvfOzpGRfQZga"><path d="M3 21h18" data-page-node-id="MX0m0Rxwo3VrlPPV4Npe55"/><path d="M5 21V8l7-5 7 5v13" data-page-node-id="knw4RaiXJIscssXjXnZEDU"/><path d="M9 21v-6h6v6" data-page-node-id="AYzPXYfvP5CJPCH3yGrwGc"/><path d="M9 11h.01M15 11h.01" data-page-node-id="HYPBvYIRz2Vk44WWWIE8u7"/></svg>
       板块一 · 住院管理
     </button>
-    <button class="nav-btn" data-view="outpatient" onclick="switchView('outpatient')">
-      <svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/><path d="M10 16h4"/></svg>
+    <button class="nav-btn" data-view="outpatient" onclick="switchView('outpatient')" data-page-node-id="yccGh5LSxpSdEH5Dt7c6kZ">
+      <svg viewBox="0 0 24 24" data-page-node-id="619isMz9eVxEanh4Byy6RV"><path d="M4 12v9h16v-9" data-page-node-id="2bDLQI3nHBm18k2vEc1bNk"/><path d="M2 8h20l-2-5H4z" data-page-node-id="RhwtbldIWddAHJXw4hg5Wj"/><path d="M12 12v4" data-page-node-id="ZrEmUkrcFLBSe2dTmLFAV9"/><path d="M10 16h4" data-page-node-id="yvVcKm6zhL6b6aUVkl0dll"/></svg>
       板块二 · 出院随访
     </button>
-    <button class="nav-btn" data-view="templates" onclick="switchView('templates')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    <button class="nav-btn" data-view="templates" onclick="switchView('templates')" data-page-node-id="NrWcufJp2nkr8dW2cUe39r">
+      <svg viewBox="0 0 24 24" data-page-node-id="VRD6BWEtbLgFIVmJksunp9"><rect x="3" y="3" width="7" height="7" rx="1.5" data-page-node-id="lrv286X6bEAwxifAT8zyWt"/><rect x="14" y="3" width="7" height="7" rx="1.5" data-page-node-id="WhEON5NsFxmHLVpDtBppmu"/><rect x="3" y="14" width="7" height="7" rx="1.5" data-page-node-id="ucQVzwgAJgdWE4NyA76HPM"/><rect x="14" y="14" width="7" height="7" rx="1.5" data-page-node-id="fkLEACwrSwXrjNz0W9LhrF"/></svg>
       模板库
     </button>
-    <div class="grow"></div>
+    <div class="grow" data-page-node-id="TFdc8AlDE3oqlwykmazmfF"></div>
   </div>
 </nav>
 
-<main>
+<main data-page-node-id="EXpZSZR6Q0NVWQTCrHwth0">
   <!-- ===== 今日视图 ===== -->
-  <section class="view active" id="view-today">
-    <div class="stats">
-      <div class="stat primary"><div class="num" id="stIn" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4">0</div><div class="lbl">住院中</div></div>
-      <div class="stat"><div class="num" id="stFu" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4">0</div><div class="lbl">随访中</div></div>
-      <div class="stat primary"><div class="num" id="stToday" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9">0</div><div class="lbl">今日到期</div></div>
-      <div class="stat danger"><div class="num" id="stOver" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9">0</div><div class="lbl">已逾期</div></div>
+  <section class="view active" id="view-today" data-page-node-id="l6r4TLAkTCBBWhe38Sgy6e">
+    <div class="stats" data-page-node-id="yqQI44SBWmAwHftMqTBN8C">
+      <div class="stat primary" data-page-node-id="BzHNREZoJMVBDfzViyaw5n"><div class="num" id="stIn" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4" data-page-node-id="C3eJ6t8MkHnxyDXTA2bV8c">0</div><div class="lbl" data-page-node-id="iL8cjt5OktQr4oGcQFfs71">住院中</div></div>
+      <div class="stat" data-page-node-id="VTOtBA62I13UujXDTjJwX6"><div class="num" id="stFu" data-sp-bindable="database" data-sp-database-id="NpdwBCFJNCky6xIwPU9dO4" data-page-node-id="ZsJ5YixTWkjMRYL6cR2s64">0</div><div class="lbl" data-page-node-id="VHmK2WmN7CTACiRrd5GU7C">随访中</div></div>
+      <div class="stat primary" data-page-node-id="UsJTqdeB3EPUFM9c8ihOAg"><div class="num" id="stToday" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9" data-page-node-id="QIzARcVtnUGPzHkj6ybvuN">0</div><div class="lbl" data-page-node-id="jI7wq2Hx9iYbYjxhHT0ysK">今日到期</div></div>
+      <div class="stat danger" data-page-node-id="hcTbjVmr98AQqQzSpgE4ZB"><div class="num" id="stOver" data-sp-bindable="database" data-sp-database-id="VQMCWHtaiuLnKl9W4qt1l9" data-page-node-id="HR0VdBY2NAUWtifjWBgFTh">0</div><div class="lbl" data-page-node-id="Fp8PA2k5706MxAoW7gvB6F">已逾期</div></div>
     </div>
 
-    <div class="toolbar">
-      <button class="btn" onclick="openAddPatientModal()">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    <div class="toolbar" data-page-node-id="Y8qhwz8IntOOACyXmTDXGp">
+      <button class="btn" onclick="openAddPatientModal()" data-page-node-id="KA6FHKZkMVoY0Bjj9SLrYR">
+        <svg viewBox="0 0 24 24" data-page-node-id="nd3FL4FPnZGajZPMLnzKzK"><path d="M12 5v14M5 12h14" data-page-node-id="VCWHbub3HNx3oYYMggQyzP"/></svg>
         新增患者
       </button>
-      <button class="btn ghost sm" onclick="exportData()">
-        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+      <button class="btn ghost sm" onclick="exportData()" data-page-node-id="Oa12hv2LPybL1fREdqABvq">
+        <svg viewBox="0 0 24 24" data-page-node-id="MBSuUlMPtz4okrVftB2anN"><path d="M12 3v12M7 10l5 5 5-5" data-page-node-id="aMGnbNEEKVn6yHLxNczJMv"/><path d="M4 21h16" data-page-node-id="CH8XTwDZT4mLlH5AUhAeUZ"/></svg>
         导出备份
       </button>
-      <button class="btn ghost sm" onclick="document.getElementById('importFile').click()">
-        <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>
+      <button class="btn ghost sm" onclick="document.getElementById('importFile').click()" data-page-node-id="BqZHBZI7GFpoG2QMeSRfti">
+        <svg viewBox="0 0 24 24" data-page-node-id="rwsv8lqKt9nk1UNKF9rQo7"><path d="M12 15V3M7 8l5-5 5 5" data-page-node-id="D6KBYB7ha53OmfwnjOBFjy"/><path d="M4 21h16" data-page-node-id="GLgw0JHgX12VIGnDOYuAs9"/></svg>
         导入恢复
       </button>
-      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)" data-page-node-id="FNw03jOaGGyE7itNXLRdKv">
     </div>
 
-    <h2 class="sec-title">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h8M8 18h5"/></svg>
+    <h2 class="sec-title" data-page-node-id="OMHyGUFv12FKNKooUS0AGA">
+      <svg viewBox="0 0 24 24" data-page-node-id="HCVDJl3qOSlElBZabfmj7V"><rect x="3" y="4" width="18" height="18" rx="2" data-page-node-id="DD59CqDLGlsw5XqGLpQivd"/><path d="M16 2v4M8 2v4M3 10h18" data-page-node-id="TSAwEyfcI2TJqkhy52mBxF"/><path d="M8 14h8M8 18h5" data-page-node-id="TJIE4lkNAxmUJox014EKnw"/></svg>
       今天要处理
     </h2>
-    <div id="todayList"></div>
+    <div id="todayList" data-page-node-id="nSVz9cRkR32zQICyY2w1Cf"></div>
   </section>
 
   <!-- ===== 板块一 · 住院管理 ===== -->
-  <section class="view" id="view-inpatient">
-    <div class="toolbar">
-      <div class="search-box grow">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="text" id="inSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderInpatient()">
+  <section class="view" id="view-inpatient" data-page-node-id="IgKfsSlo5E6ZaF3U1zNdSJ">
+    <div class="toolbar" data-page-node-id="c7AgWCouUMqNHgx8sh8LqH">
+      <div class="search-box grow" data-page-node-id="FBn3hNh1pebpdLbhcUW87m">
+        <svg viewBox="0 0 24 24" data-page-node-id="jYE31ArnHsxtPYdgwc4Oi1"><circle cx="11" cy="11" r="7" data-page-node-id="0eMD4ljU902mtHv8faiTG3"/><path d="M21 21l-4.3-4.3" data-page-node-id="dBkHc8tA69ndoL1C4yeHEp"/></svg>
+        <input type="text" id="inSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderInpatient()" data-page-node-id="B9isIBVkMMaG9frE9A6an0">
       </div>
-      <button class="btn" onclick="openAddPatientModal()">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        <span>入院登记</span>
+      <button class="btn" onclick="openAddPatientModal()" data-page-node-id="5yFDMr6eKaWgAX28AwbUrS">
+        <svg viewBox="0 0 24 24" data-page-node-id="1cFZALk2WI3a2qy6MTxFDW"><path d="M12 5v14M5 12h14" data-page-node-id="WKvWDhMGqyguIk3WZ3Jzn4"/></svg>
+        <span data-page-node-id="8CdQvKuX9a56VdE5YmmDIe">入院登记</span>
       </button>
     </div>
-    <div class="card card-pad" style="background:var(--primary-weak);border:1px solid #bfdbfe;font-size:13px;color:#1e40af;margin-bottom:12px">
+    <div class="card card-pad" style="background:var(--primary-weak);border:1px solid #bfdbfe;font-size:13px;color:#1e40af;margin-bottom:12px" data-page-node-id="y5HerglFF3HeX4mkvpIupe">
       板块一 · 住院管理：当前在院的患者（手术/非手术均可）。完成治疗后点击「办理出院」→ 手术患者按手术日、非手术患者按出院日自动生成随访计划并进入板块二。
     </div>
-    <div id="inpatientGrid" class="patient-grid"></div>
-    <div class="card card-pad" style="margin-top:12px">
-      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap">
-        <span>演示数据说明：页面预置了脱敏示例患者与常用随访模板，可一键清空。</span>
-        <button class="btn danger sm" onclick="clearDemoData()">清空示例数据</button>
+    <div id="inpatientGrid" class="patient-grid" data-page-node-id="nbjddRG5LXU33L0UAsu1TU"></div>
+    <div class="card card-pad" style="margin-top:12px" data-page-node-id="F3CnRiTYQMdJ7ApLNRrRwu">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap" data-page-node-id="DjtegLApf6HWJv9IAH0MvA">
+        <span data-page-node-id="iw86Fb5poCIFHrQJJYw1hN">演示数据说明：页面预置了脱敏示例患者与常用随访模板，可一键清空。</span>
+        <button class="btn danger sm" onclick="clearDemoData()" data-page-node-id="T7cotZzH73hG4FsIH4GToQ">清空示例数据</button>
       </div>
     </div>
   </section>
 
   <!-- ===== 板块二 · 出院随访 ===== -->
-  <section class="view" id="view-outpatient">
-    <div class="toolbar">
-      <div class="search-box grow">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="text" id="outSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderOutpatient()">
+  <section class="view" id="view-outpatient" data-page-node-id="F80DU5DEXHdv5VwWmVnBp7">
+    <div class="toolbar" data-page-node-id="7xZgiWX5KVyjKGNmDmyRVE">
+      <div class="search-box grow" data-page-node-id="wGVLbvzlcMw6IiTEzOQGH1">
+        <svg viewBox="0 0 24 24" data-page-node-id="XbLj4lHJTD9uGwdxndkIUm"><circle cx="11" cy="11" r="7" data-page-node-id="9pZ2fvwP2trpyzGWFMRYhT"/><path d="M21 21l-4.3-4.3" data-page-node-id="8TebCPKQvwXVxtRKqpHLIy"/></svg>
+        <input type="text" id="outSearch" placeholder="搜索姓名 / 住院号 / 诊断" oninput="renderOutpatient()" data-page-node-id="a3nkhNBZ7exdDfcTs7TvQO">
       </div>
-      <button class="btn ghost sm" onclick="exportData()">
-        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+      <button class="btn ghost sm" onclick="exportData()" data-page-node-id="L5aydX9Cmc9LOaKkvHNxb5">
+        <svg viewBox="0 0 24 24" data-page-node-id="VHKFkkmjWz6nvUQbdWhMBM"><path d="M12 3v12M7 10l5 5 5-5" data-page-node-id="1ifAykPIpG75XcU9rquwXo"/><path d="M4 21h16" data-page-node-id="yGVrKWB4JH3G4BlMRqCPTU"/></svg>
         导出备份
       </button>
     </div>
-    <div class="chips" id="outChips" style="margin-bottom:12px"></div>
-    <div id="outpatientGrid" class="patient-grid"></div>
+    <div class="chips" id="outChips" style="margin-bottom:12px" data-page-node-id="Xzr9rQH2bkUgSgcbfmOwYA"></div>
+    <div id="outpatientGrid" class="patient-grid" data-page-node-id="0FFYZEqnjLKe5hUlBAEkUb"></div>
   </section>
 
   <!-- ===== 模板视图 ===== -->
-  <section class="view" id="view-templates">
-    <div class="toolbar">
-      <button class="btn" onclick="openTemplateModal('住院提醒')">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  <section class="view" id="view-templates" data-page-node-id="lCrFEW9vmhDjj62952StXL">
+    <div class="toolbar" data-page-node-id="qYyrv61zVgK3dDfqepusKG">
+      <button class="btn" onclick="openTemplateModal('住院提醒')" data-page-node-id="Por3tGBmLjzXKmONOGi9py">
+        <svg viewBox="0 0 24 24" data-page-node-id="QvJMFrEBfkMC9Dp7fLMbf2"><path d="M12 5v14M5 12h14" data-page-node-id="Jt46LD3TJIkHt4sp3NMRgF"/></svg>
         新增住院提醒模板
       </button>
-      <button class="btn ghost" onclick="openTemplateModal('随访节点')">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <button class="btn ghost" onclick="openTemplateModal('随访节点')" data-page-node-id="ZMcHK8qpiG3NUabG0s0SJv">
+        <svg viewBox="0 0 24 24" data-page-node-id="pFAkx3wRpSt8tKIDlnR81R"><path d="M12 5v14M5 12h14" data-page-node-id="apdAj7CFLyVt3JwLk6pcQd"/></svg>
         新增随访节点模板
       </button>
-      <button class="btn ghost" onclick="openTemplateModal('随访内容')">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <button class="btn ghost" onclick="openTemplateModal('随访内容')" data-page-node-id="NXHdcVjjKv0VOuetCTSfYF">
+        <svg viewBox="0 0 24 24" data-page-node-id="5S4DEJSCpQD0dTDG6KHvN9"><path d="M12 5v14M5 12h14" data-page-node-id="6OQGfVWQ0Re5fB9cf64UAi"/></svg>
         新增随访内容模板
       </button>
     </div>
-    <div id="tplList"></div>
-    <div class="card card-pad" style="font-size:13px;color:var(--muted)">
-      <b>使用说明：</b>「住院提醒」在新增患者时自动按入院日生成；「随访节点」在办理出院时生成——手术患者用「手术日」基准模板、非手术患者用「出院日」基准模板；「随访内容」在处理随访时可一键填入记录。节点日期 = 基准日期 + 偏移天数。
+    <div id="tplList" data-page-node-id="fgWpVvwMe82lElc06K046G"></div>
+    <div class="card card-pad" style="font-size:13px;color:var(--muted)" data-page-node-id="CFqCFyD9wZcmNlxJHLB9kZ">
+      <b data-page-node-id="Bh57rU6OLislKcAl9HbjH0">使用说明：</b>「住院提醒」在新增患者时自动按入院日生成；「随访节点」在办理出院时生成——手术患者用「手术日」基准模板、非手术患者用「出院日」基准模板；「随访内容」在处理随访时可一键填入记录。节点日期 = 基准日期 + 偏移天数。
     </div>
   </section>
 
   <!-- ===== 患者详情（覆盖视图，板块一/二共用） ===== -->
-  <div id="patientDetail" style="display:none"></div>
+  <div id="patientDetail" style="display:none" data-page-node-id="Ebc27ARD8AJ4GROsz9WfNl"></div>
 </main>
 
 <!-- 移动端底部导航 -->
-<div class="tabbar">
-  <button class="tab-btn active" data-view="today" onclick="switchView('today')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h8M8 18h5"/></svg>
-    今日 <span class="t-cnt" id="tabTodayCnt" style="display:none">0</span>
+<div class="tabbar" data-page-node-id="tfVDswQJMlRQwTF0RMtfYd">
+  <button class="tab-btn active" data-view="today" onclick="switchView('today')" data-page-node-id="NAoc0xFOGVU1x8KjUZ7qbq">
+    <svg viewBox="0 0 24 24" data-page-node-id="RNs5QTm6V3vN3YXTd3Jz3R"><rect x="3" y="4" width="18" height="18" rx="2" data-page-node-id="eHgv63DxGbnExiNlzqRFVZ"/><path d="M16 2v4M8 2v4M3 10h18" data-page-node-id="vduTEa0XYyJRefwRPpxEP4"/><path d="M8 14h8M8 18h5" data-page-node-id="RKe66OBjLgNk9GzALsWxhX"/></svg>
+    今日 <span class="t-cnt" id="tabTodayCnt" style="display:none" data-page-node-id="mYi5BHFVhWRKHkqEVTg9Zm">0</span>
   </button>
-  <button class="tab-btn" data-view="inpatient" onclick="switchView('inpatient')">
-    <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+  <button class="tab-btn" data-view="inpatient" onclick="switchView('inpatient')" data-page-node-id="danljOtHehKdH1NF8EaTpf">
+    <svg viewBox="0 0 24 24" data-page-node-id="4EMkE9L0Rvhu6hQrbQ5poZ"><path d="M3 21h18" data-page-node-id="ZDecxMfLCjooWgiZShCnGD"/><path d="M5 21V8l7-5 7 5v13" data-page-node-id="PjxKAYRqCh96lE7bPVyGWc"/><path d="M9 21v-6h6v6" data-page-node-id="TJQhK2THV6CAEn75aug197"/><path d="M9 11h.01M15 11h.01" data-page-node-id="YECtIzFkSVdgX4Qasxhe7k"/></svg>
     住院
   </button>
-  <button class="tab-btn" data-view="outpatient" onclick="switchView('outpatient')">
-    <svg viewBox="0 0 24 24"><path d="M4 12v9h16v-9"/><path d="M2 8h20l-2-5H4z"/><path d="M12 12v4"/><path d="M10 16h4"/></svg>
+  <button class="tab-btn" data-view="outpatient" onclick="switchView('outpatient')" data-page-node-id="K8ClrpCcTV2mpC0TJhSmnV">
+    <svg viewBox="0 0 24 24" data-page-node-id="9A9QWwJWu9H7KjDcanSijr"><path d="M4 12v9h16v-9" data-page-node-id="NXheFKhrp07QrBsOnFR6AP"/><path d="M2 8h20l-2-5H4z" data-page-node-id="u3kVoSIXKHiw4SRITDTbTy"/><path d="M12 12v4" data-page-node-id="Dm0UaavBFpWLouwTVGtheG"/><path d="M10 16h4" data-page-node-id="GgkAI6hMXOhingRpkO6Er0"/></svg>
     随访
   </button>
-  <button class="tab-btn" data-view="templates" onclick="switchView('templates')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+  <button class="tab-btn" data-view="templates" onclick="switchView('templates')" data-page-node-id="GJJMFAfKJcKqKqBRcOA1jP">
+    <svg viewBox="0 0 24 24" data-page-node-id="120GB7BraB3C8Mlk8l99fr"><rect x="3" y="3" width="7" height="7" rx="1.5" data-page-node-id="bFJFCht9DjrTaLbLtHOLul"/><rect x="14" y="3" width="7" height="7" rx="1.5" data-page-node-id="3UIdMaTxoiRhVfhWRAd7kb"/><rect x="3" y="14" width="7" height="7" rx="1.5" data-page-node-id="tMo4Yk8Sh8bWnPmBApdBJd"/><rect x="14" y="14" width="7" height="7" rx="1.5" data-page-node-id="1M7If4qq7LBkBEzyJN3vuD"/></svg>
     模板
   </button>
 </div>
 
 <!-- 弹窗 -->
-<div class="mask" id="mask" onclick="if(event.target===this)closeModal()">
-  <div class="modal" id="modalBox"></div>
+<div class="mask" id="mask" onclick="if(event.target===this)closeModal()" data-page-node-id="HQAEJBApJG1zCeC87z1C4h">
+  <div class="modal" id="modalBox" data-page-node-id="pNWEMlPfjiHJDKIbhsyJib"></div>
 </div>
-<div id="toast"></div>
+<div id="toast" data-page-node-id="UKUlTSWymKeKGV3syAIRfA"></div>
+
+<!-- 全局搜索覆盖层 -->
+<div class="gsearch" id="gsearch">
+  <div class="gs-head">
+    <div class="gs-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="gsearchInput" placeholder="搜索患者 / 任务 / 病历 / 记录" autocomplete="off" oninput="globalSearchRun()" onkeydown="gsearchKey(event)">
+    </div>
+    <button class="gs-close" onclick="closeGlobalSearch()">取消</button>
+  </div>
+  <div class="gs-results" id="gsearchResults"></div>
+</div>
 
 <script>
 (function(){
@@ -1448,6 +1489,103 @@ function applyOcr(pid){
   chart[field]=(chart[field]?chart[field]+'\n':'')+text.trim();
   apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('已填入「'+field+'」'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
 }
+/* ================= 全局搜索（患者 / 任务 / 病历 / 随访记录） ================= */
+function hlText(text, q){
+  var s = escapeHtml(text==null?'':String(text));
+  if (!q) return s;
+  try {
+    var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi');
+    return s.replace(re, '<mark>$1</mark>');
+  } catch(e){ return s; }
+}
+function gsearchItem(kindLabel, title, sub, onclick){
+  return '<div class="gs-item" onclick="' + onclick + '">'
+    + '<span class="gs-k">' + escapeHtml(kindLabel) + '</span>'
+    + '<div class="gs-t"><b>' + title + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>'
+    + '</div>';
+}
+function globalSearchRun(){
+  var q = (document.getElementById('gsearchInput').value||'').trim().toLowerCase();
+  var box = document.getElementById('gsearchResults');
+  if (!box) return;
+  if (!q){ box.innerHTML = '<div class="tl-empty">输入关键字，可搜患者（姓名/住院号/诊断/术式/电话）、随访任务、病历内容、随访记录</div>'; return; }
+  var pts = [], tks = [], charts = [], recs = [];
+  state.patients.forEach(function(p){
+    var hay = ((p['姓名']||'')+' '+(p['住院号']||'')+' '+(p['诊断']||'')+' '+(p['术式']||'')+' '+(p['联系电话']||'')).toLowerCase();
+    if (hay.indexOf(q) >= 0) pts.push(p);
+  });
+  state.tasks.forEach(function(t){
+    var hay = ((t['阶段']||'')+' '+(t['内容']||'')+' '+(t['患者姓名']||'')).toLowerCase();
+    if (hay.indexOf(q) >= 0) tks.push(t);
+  });
+  state.patients.forEach(function(p){
+    var ch = p['病历']||{};
+    for (var f in ch){
+      if (ch[f] && String(ch[f]).toLowerCase().indexOf(q) >= 0){ charts.push({ p:p, field:f, text:String(ch[f]) }); break; }
+    }
+  });
+  state.records.forEach(function(r){
+    var hay = ((r['内容']||'')+' '+(r['结果']||'')+' '+(r['患者姓名']||'')).toLowerCase();
+    if (hay.indexOf(q) >= 0) recs.push(r);
+  });
+  var total = pts.length + tks.length + charts.length + recs.length;
+  if (!total){ box.innerHTML = '<div class="tl-empty">未找到与「' + escapeHtml(q) + '」相关的内容</div>'; return; }
+  var html = '';
+  if (pts.length){
+    html += '<div class="gs-group-title">患者（' + pts.length + '）</div>';
+    pts.slice(0,20).forEach(function(p){
+      html += gsearchItem('患者', hlText(p['姓名']||'未命名', q), hlText([p['诊断'],p['术式'],p['住院号']].filter(Boolean).join(' · '), q), 'gsJumpPatient(\''+p._id+'\')');
+    });
+  }
+  if (tks.length){
+    html += '<div class="gs-group-title">随访任务（' + tks.length + '）</div>';
+    tks.slice(0,20).forEach(function(t){
+      html += gsearchItem(t['事项类型']||'任务', hlText(t['阶段']||'未命名节点', q), hlText((t['患者姓名']||'')+' · '+fmtDate(t['计划日期'])+' · '+(t['内容']||''), q), 'gsJumpTask(\''+t._id+'\')');
+    });
+  }
+  if (charts.length){
+    html += '<div class="gs-group-title">病历内容（' + charts.length + '）</div>';
+    charts.slice(0,20).forEach(function(c){
+      html += gsearchItem('病历', hlText((c.p['姓名']||'')+' · '+c.field, q), hlText(c.text.slice(0,80), q), 'gsJumpChart(\''+c.p._id+'\')');
+    });
+  }
+  if (recs.length){
+    html += '<div class="gs-group-title">随访记录（' + recs.length + '）</div>';
+    recs.slice(0,20).forEach(function(r){
+      html += gsearchItem(r['类型']||'记录', hlText(r['内容']||'记录', q), hlText((r['患者姓名']||'')+' · '+fmtDate(r['日期'])+' · '+(r['结果']||''), q), 'gsJumpRecord(\''+(r['患者ID']||'')+'\')');
+    });
+  }
+  box.innerHTML = html;
+}
+function openGlobalSearch(){
+  var el = document.getElementById('gsearch');
+  if (!el) return;
+  el.classList.add('show');
+  var inp = document.getElementById('gsearchInput');
+  if (inp) inp.value = '';
+  var box = document.getElementById('gsearchResults');
+  if (box) box.innerHTML = '<div class="tl-empty">输入关键字，可搜患者（姓名/住院号/诊断/术式/电话）、随访任务、病历内容、随访记录</div>';
+  setTimeout(function(){ if (inp) inp.focus(); }, 60);
+}
+function closeGlobalSearch(){
+  var el = document.getElementById('gsearch');
+  if (el) el.classList.remove('show');
+}
+function gsearchKey(e){
+  if (!e) return;
+  if (e.key === 'Escape'){ closeGlobalSearch(); }
+  else if (e.key === 'Enter'){ var f = document.querySelector('#gsearchResults .gs-item'); if (f) f.click(); }
+}
+function gsJumpPatient(pid){ if(!pid) return; closeGlobalSearch(); state.selectedPatientId = pid; renderDetail(); }
+function gsJumpTask(tid){
+  var t = null; state.tasks.forEach(function(x){ if (x._id === tid) t = x; });
+  if (!t) return;
+  closeGlobalSearch();
+  openPatientDetail(t['患者ID']);
+  setTimeout(function(){ openTaskModal(tid); }, 150);
+}
+function gsJumpChart(pid){ if(!pid) return; closeGlobalSearch(); state.selectedPatientId = pid; renderDetail(); }
+function gsJumpRecord(pid){ if(!pid) return; closeGlobalSearch(); state.selectedPatientId = pid; renderDetail(); }
 /* 病历夹区块（编辑按钮 + 附件画廊） */
 function renderChartSection(p){
   var atts=p['附件']||[];
@@ -2321,6 +2459,7 @@ function initSchema(){
 document.addEventListener('DOMContentLoaded', function(){
   initSchema();
   updateModeBanner();
+  setupPWA();
   var dismissed = false;
   try { dismissed = localStorage.getItem(PREFIX + 'banner_dismissed') === '1'; } catch(e){}
   if (!dismissed){
@@ -2343,6 +2482,12 @@ function updateModeBanner(){
     txt.innerHTML = '<b>已启用 GitHub 云端同步</b> · 数据存于你的私有仓库，手机/电脑打开同一网址并登录同一账号即可实时共享。';
   } else {
     txt.innerHTML = '<b>当前为本地保存模式</b> · 数据仅存本设备浏览器。点击右上角「同步设置」配置 GitHub 私有仓库即可开启多设备共享。';
+  }
+}
+/* PWA：注册 Service Worker（离线可用；file:// 或无 sw.js 时静默降级） */
+function setupPWA(){
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
   }
 }
 function showCloudTip(){
@@ -2452,6 +2597,14 @@ window.applyOcr = applyOcr;
 window.loadGallery = loadGallery;
 window.state = state;
 window.renderDetail = renderDetail;
+window.openGlobalSearch = openGlobalSearch;
+window.closeGlobalSearch = closeGlobalSearch;
+window.globalSearchRun = globalSearchRun;
+window.gsearchKey = gsearchKey;
+window.gsJumpPatient = gsJumpPatient;
+window.gsJumpTask = gsJumpTask;
+window.gsJumpChart = gsJumpChart;
+window.gsJumpRecord = gsJumpRecord;
 window.loadTesseract = loadTesseract;
 window.tessLangPath = tessLangPath;
 window.idbPut = idbPut;
