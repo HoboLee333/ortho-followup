@@ -390,6 +390,42 @@ mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
 .pan-content{font-size:13px;color:#374151;margin-top:4px;white-space:pre-wrap;word-break:break-word}
 #ocrText{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 11px;outline:none;font-size:13.5px;line-height:1.6;resize:vertical}
 #ocrText:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+/* ===== 打印（病历夹打印） ===== */
+.print-only{display:none}
+.print-head{border-bottom:2px solid #111827;padding-bottom:8px;margin-bottom:12px}
+.print-head .ph-title{font-size:18px;font-weight:800;text-align:center;letter-spacing:2px}
+.print-head .ph-meta{display:flex;justify-content:space-between;font-size:12px;color:#374151;margin-top:6px}
+@media print{
+  @page{margin:12mm}
+  html,body{background:#fff !important}
+  header,nav,.tabbar,.banner,.toolbar,.stats,#gsearch,#mask,#toast,.media-bar,.d-actions,.t-actions,.tl-actions,.tpl-actions,.back-btn,.search-box,.sync-badge,.btn,.empty{display:none !important}
+  .view{display:none !important}
+  main{max-width:none !important;padding:0 !important;margin:0 !important}
+  .print-only{display:block !important}
+  .card,.card-pad,.chart-sum,.tl-card,.pan-body,.rec-item,.info-cell{box-shadow:none !important;border-color:#d1d5db !important;background:#fff !important}
+  .cs-row,.tl-item,.pan-item,.rec-item,.info-cell{break-inside:avoid}
+  .sec-title{break-after:avoid}
+  .cs-v,.pan-content,.tl-content{color:#111827 !important}
+  .badge,.status-tag{border:1px solid #9ca3af !important;background:#fff !important;color:#111827 !important}
+  .tl-empty{color:#6b7280 !important}
+}
+/* ===== 统计趋势图 ===== */
+.stats-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+@media(min-width:720px){.stats-grid{grid-template-columns:1fr 1fr}}
+.stats-block{border:1px solid var(--border);border-radius:12px;padding:12px}
+.stats-block h3{font-size:13.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.stats-legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap}
+.stats-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.stats-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
+.stats-sum .ss{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center}
+.stats-sum .ss b{display:block;font-size:17px;color:var(--text)}
+.stats-sum .ss span{font-size:11px;color:var(--muted)}
+.stats-bar-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px}
+.stats-bar-row .lb{width:96px;flex-shrink:0;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stats-bar-row .track{flex:1;background:#f1f5f9;border-radius:5px;height:14px;overflow:hidden}
+.stats-bar-row .fill{height:100%;border-radius:5px;background:var(--primary)}
+.stats-bar-row .ct{width:34px;text-align:right;color:var(--muted);font-weight:700;flex-shrink:0}
+.stats-empty{font-size:12.5px;color:var(--muted);padding:8px 0}
 
 </style>
 </head>
@@ -476,6 +512,7 @@ mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
       今天要处理
     </h2>
     <div id="todayList" data-page-node-id="nSVz9cRkR32zQICyY2w1Cf"></div>
+    <div class="card card-pad" id="statsCard" style="margin-top:14px" data-page-node-id="statsCardNode"></div>
   </section>
 
   <!-- ===== 板块一 · 住院管理 ===== -->
@@ -546,6 +583,8 @@ mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
 
   <!-- ===== 患者详情（覆盖视图，板块一/二共用） ===== -->
   <div id="patientDetail" style="display:none" data-page-node-id="Ebc27ARD8AJ4GROsz9WfNl"></div>
+  <!-- 打印兜底提示（仅打印时可见） -->
+  <div id="printFallback" style="display:none"></div>
 </main>
 
 <!-- 移动端底部导航 -->
@@ -1178,6 +1217,90 @@ function renderToday(){
     html = '<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14l1.5 1.5L16 13"/></svg><p>今日无待办，全部随访任务已按时完成 🎉<br><span style="font-size:12.5px">新增患者或办理出院后，提醒会自动出现在这里</span></p></div>';
   }
   el.innerHTML = html;
+  renderTrendStats();
+}
+/* ================= 统计趋势（纯内联 SVG，无外部依赖） ================= */
+function monthKey(d){ return String(d || '').slice(0, 7); } /* YYYY-MM */
+function lastMonths(n){
+  var out = [], d = parseDate(state.today);
+  for (var i = n - 1; i >= 0; i--){ var x = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push(x.getFullYear() + '-' + pad(x.getMonth() + 1)); }
+  return out;
+}
+function ssBox(v, l){ return '<div class="ss"><b>' + v + '</b><span>' + l + '</span></div>'; }
+function trendSvg(){
+  var months = lastMonths(6), inCnt = {}, opCnt = {};
+  state.patients.forEach(function(p){
+    var k = monthKey(p['入院日期']); if (!k) return;
+    inCnt[k] = (inCnt[k] || 0) + 1;
+    if (isSurgical(p)) opCnt[k] = (opCnt[k] || 0) + 1;
+  });
+  var W = 320, H = 150, padL = 26, padT = 12, padB = 20;
+  var iw = W - padL - 6, ih = H - padT - padB;
+  var max = 1;
+  months.forEach(function(m){ max = Math.max(max, inCnt[m] || 0, opCnt[m] || 0); });
+  if (max <= 4) max = Math.max(max, 4); /* 少量数据时避免柱子顶格 */
+  var gw = iw / months.length, bw = Math.min(13, (gw - 12) / 2);
+  var grid = '', bars = '', labels = '';
+  for (var g = 0; g <= 4; g++){
+    var gy = padT + ih - ih * g / 4;
+    grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - 6) + '" y2="' + gy + '" stroke="#e5e7eb"/>' +
+      '<text x="' + (padL - 4) + '" y="' + (gy + 3) + '" font-size="8" fill="#9ca3af" text-anchor="end">' + Math.round(max * g / 4) + '</text>';
+  }
+  months.forEach(function(m, i){
+    var x0 = padL + gw * i + gw / 2;
+    var hIn = (inCnt[m] || 0) / max * ih, hOp = (opCnt[m] || 0) / max * ih;
+    bars += '<rect x="' + (x0 - bw - 1) + '" y="' + (padT + ih - hIn) + '" width="' + bw + '" height="' + hIn + '" rx="2" fill="#3b82f6"/>';
+    bars += '<rect x="' + (x0 + 1) + '" y="' + (padT + ih - hOp) + '" width="' + bw + '" height="' + hOp + '" rx="2" fill="#14b8a6"/>';
+    if (inCnt[m]) bars += '<text x="' + (x0 - bw / 2 - 1) + '" y="' + (padT + ih - hIn - 3) + '" font-size="8" fill="#1d4ed8" text-anchor="middle">' + inCnt[m] + '</text>';
+    if (opCnt[m]) bars += '<text x="' + (x0 + bw / 2 + 1) + '" y="' + (padT + ih - hOp - 3) + '" font-size="8" fill="#0f766e" text-anchor="middle">' + opCnt[m] + '</text>';
+    labels += '<text x="' + x0 + '" y="' + (H - 6) + '" font-size="8.5" fill="#6b7280" text-anchor="middle">' + (+m.slice(5)) + '月</text>';
+  });
+  return '<div class="stats-block"><h3>近 6 个月趋势</h3><div class="stats-legend"><span><i style="background:#3b82f6"></i>入院患者</span><span><i style="background:#14b8a6"></i>其中手术</span></div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="近6个月入院与手术趋势图">' + grid +
+    '<line x1="' + padL + '" y1="' + (padT + ih) + '" x2="' + (W - 6) + '" y2="' + (padT + ih) + '" stroke="#9ca3af"/>' + bars + labels + '</svg></div>';
+}
+function taskStack(done, wait, skip){
+  var t = done + wait + skip;
+  if (!t) return '<div class="stats-empty">暂无任务数据</div>';
+  var W = 300, H = 16, x = 0, r = '';
+  [[ '#16a34a', done ], [ '#d97706', wait ], [ '#9ca3af', skip ]].forEach(function(s){
+    var w = s[1] / t * W;
+    if (w > 0){ r += '<rect x="' + x + '" y="0" width="' + w + '" height="' + H + '" fill="' + s[0] + '"/>'; x += w; }
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:16px;display:block" role="img" aria-label="任务状态分布">' + r + '</svg>' +
+    '<div class="stats-legend" style="margin-top:6px"><span><i style="background:#16a34a"></i>已完成 ' + done + '</span><span><i style="background:#d97706"></i>待处理 ' + wait + '</span><span><i style="background:#9ca3af"></i>已跳过 ' + skip + '</span></div>';
+}
+function diagTop(){
+  var map = {};
+  state.patients.forEach(function(p){
+    var d = (p['诊断'] || '').trim(); if (!d) return;
+    if (d.length > 14) d = d.slice(0, 14) + '…';
+    map[d] = (map[d] || 0) + 1;
+  });
+  var arr = Object.keys(map).map(function(k){ return [k, map[k]]; }).sort(function(a, b){ return b[1] - a[1]; }).slice(0, 5);
+  if (!arr.length) return '<div class="stats-empty">暂无诊断数据</div>';
+  var max = arr[0][1];
+  return arr.map(function(it){
+    return '<div class="stats-bar-row"><span class="lb" title="' + escapeHtml(it[0]) + '">' + escapeHtml(it[0]) + '</span>' +
+      '<div class="track"><div class="fill" style="width:' + Math.round(it[1] / max * 100) + '%"></div></div><span class="ct">' + it[1] + '</span></div>';
+  }).join('');
+}
+function renderTrendStats(){
+  var el = document.getElementById('statsCard'); if (!el) return;
+  var pts = state.patients || [], tks = state.tasks || [], recs = state.records || [];
+  var surg = pts.filter(isSurgical).length;
+  var done = tks.filter(function(t){ return t['状态'] === '已完成'; }).length;
+  var skip = tks.filter(function(t){ return t['状态'] === '已跳过'; }).length;
+  var wait = tks.filter(function(t){ return t['状态'] === '待处理'; }).length;
+  var total = done + skip + wait;
+  var rate = total ? Math.round(done / total * 100) : 0;
+  var html = '<h2 class="sec-title" style="margin:0 0 4px"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>工作统计</h2>';
+  html += '<div class="stats-sum">' + ssBox(pts.length, '累计患者') + ssBox(surg, '手术患者') + ssBox(recs.length, '随访记录') + ssBox(rate + '%', '任务完成率') + '</div>';
+  html += '<div class="stats-grid">' + trendSvg() +
+    '<div class="stats-block"><h3>任务状态分布（共 ' + total + ' 项）</h3>' + taskStack(done, wait, skip) + '</div>' +
+    '<div class="stats-block"><h3>诊断分布 Top 5</h3>' + diagTop() + '</div>' +
+    '</div>';
+  el.innerHTML = html;
 }
 function taskItemHtml(it, isOver){
   var t = it.task, p = it.patient;
@@ -1374,6 +1497,20 @@ function saveChart(pid){
   for (var k in old){ if (old.hasOwnProperty(k) && old[k] && fields.indexOf(k)<0) chart[k]=old[k]; }
   apiUpdate('patients', pid, { '病历': chart }).then(function(){ _chartEdit=null; closeModal(); toast('病历已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
 }
+/* 打印病历夹：直接调浏览器打印；打印样式见 @media print（仅保留患者详情内容，隐藏全部操作控件） */
+function printChart(){ window.print(); }
+/* 打印兜底：未进入患者详情时打印，给出指引而非空白页 */
+window.addEventListener('beforeprint', function(){
+  var pd = document.getElementById('patientDetail');
+  var fb = document.getElementById('printFallback');
+  if (!fb) return;
+  var active = pd && pd.style.display === 'block' && pd.innerHTML.trim();
+  if (active){ fb.style.display = 'none'; fb.innerHTML = ''; }
+  else {
+    fb.innerHTML = '<div style="padding:40px 16px;text-align:center;font-size:15px;color:#374151">请先进入某位患者的详情页，再点击病历夹中的「🖨️ 打印病历」按钮。</div>';
+    fb.style.display = 'block';
+  }
+});
 /* 拍照 / 上传附件（原文件存 IndexedDB，元数据写患者） */
 function pickAttachment(pid, kind){
   var inp=document.createElement('input'); inp.type='file';
@@ -1653,6 +1790,7 @@ function renderChartSection(p){
   var html='<div class="card card-pad" style="margin-top:14px">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 class="sec-title" style="margin:0">📁 患者病历夹（骨科）</h2>';
   html+='<div class="media-bar" style="margin:0"><button class="btn ghost sm" onclick="openChartModal(\''+p._id+'\')">✏️ 编辑病历</button>';
+  html+='<button class="btn ghost sm" onclick="printChart()">🖨️ 打印病历</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'camera\')">📷 拍照</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'image\')">🖼️ 图片</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'video\')">🎬 视频</button></div></div>';
@@ -1729,6 +1867,10 @@ function renderDetail(){
   html += '<button class="btn ghost sm" onclick="openAddRecordModal(\'' + p._id + '\')">记随访</button>';
   html += '<button class="btn danger sm" onclick="deletePatient(\'' + p._id + '\')">删除</button>';
   html += '</div></div>';
+
+  html += '<div class="print-only print-head"><div class="ph-title">骨 科 病 历</div>' +
+    '<div class="ph-meta"><span>患者：' + escapeHtml(p['姓名'] || '') + '　住院号：' + escapeHtml(p['住院号'] || '—') + '</span>' +
+    '<span>打印日期：' + escapeHtml(state.today) + '</span></div></div>';
 
   html += '<div class="card card-pad">';
   html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">';
@@ -2775,6 +2917,8 @@ window.dismissBanner = dismissBanner;
 window.showCloudTip = showCloudTip;
 window.openChartModal = openChartModal;
 window.saveChart = saveChart;
+window.printChart = printChart;
+window.renderTrendStats = renderTrendStats;
 window.pickAttachment = pickAttachment;
 window.openAttachmentModal = openAttachmentModal;
 window.saveAttCap = saveAttCap;
