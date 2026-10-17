@@ -2,7 +2,7 @@
  * 策略：同源 GET 请求 → 网络优先，失败时回退缓存（离线可用）
  * 跨域请求（GitHub API、Tesseract CDN）不拦截，保证数据同步与 OCR 正常
  */
-var CACHE = 'ortho-followup-v1';
+var CACHE = 'ortho-followup-v2';
 var SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', function (e) {
