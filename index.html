@@ -1419,6 +1419,16 @@ function patientCardHtml(p, mode){
     html += '<button class="btn ghost sm" onclick="event.stopPropagation();openPatientDetail(\'' + p._id + '\')">查看详情</button>';
     html += '</div>';
   }
+  if (mode === 'out' && p['状态'] !== '住院中'){
+    html += '<div style="margin-top:10px;display:flex;gap:8px">';
+    if (p['状态'] === '随访中'){
+      html += '<button class="btn ghost sm" style="flex:1" onclick="event.stopPropagation();closePatient(\'' + p._id + '\')">办理结案</button>';
+    } else {
+      html += '<button class="btn ghost sm" style="flex:1" onclick="event.stopPropagation();reopenPatient(\'' + p._id + '\')">恢复随访</button>';
+    }
+    html += '<button class="btn ghost sm" onclick="event.stopPropagation();openPatientDetail(\'' + p._id + '\')">查看详情</button>';
+    html += '</div>';
+  }
   html += '</div>';
   return html;
 }
@@ -1865,6 +1875,8 @@ function renderDetail(){
   }
   html += '<button class="btn ghost sm" onclick="openEditPatientModal(\'' + p._id + '\')">编辑</button>';
   html += '<button class="btn ghost sm" onclick="openAddRecordModal(\'' + p._id + '\')">记随访</button>';
+  if (p['状态'] === '随访中') html += '<button class="btn ghost sm" onclick="closePatient(\'' + p._id + '\')">结案</button>';
+  else if (p['状态'] === '已结案') html += '<button class="btn ghost sm" onclick="reopenPatient(\'' + p._id + '\')">恢复随访</button>';
   html += '<button class="btn danger sm" onclick="deletePatient(\'' + p._id + '\')">删除</button>';
   html += '</div></div>';
 
@@ -2203,10 +2215,22 @@ function savePatient(isEdit){
   };
   if (isEdit){
     var pid = state.selectedPatientId;
+    var oldP = findPatient(pid, null);
+    var opOld = oldP ? fmtDate(oldP['手术日期']) : '';
+    var opNew = document.getElementById('fOpDate').value || '';
+    var opChanged = opOld !== opNew;
     apiUpdate('patients', pid, data).then(function(){
       clearFormCache();
-      toast('患者信息已更新');
       closeModal();
+      if (opChanged){
+        /* 手术日期变更：补齐/校准手术日基准的提醒（抗凝等不再丢失）。
+           注意 apiUpdate 只写缓存、未刷新内存 state，此处直接传入表单新数据 */
+        return syncSurgeryTasks(pid, data).then(function(r){
+          toast('患者信息已更新' + ((r.adds || r.updates) ? '；手术日期变更已补齐 ' + r.adds + ' 条、更新 ' + r.updates + ' 条提醒' : ''));
+        });
+      }
+      toast('患者信息已更新');
+    }).then(function(){
       refreshAll().then(function(){ state.selectedPatientId = pid; renderDetail(); });
     });
   } else {
@@ -2331,6 +2355,65 @@ function doDischarge(pid){
       switchView('outpatient');
       openPatientDetail(pid);
     });
+  });
+}
+
+/* ================= 手术日期变更：补齐/校准手术日基准的提醒 ================= */
+/* 建档时手术日期常未定，手术日基准的住院提醒（如术后抗凝）会被跳过；此处补上。
+   住院中患者 → 补齐「住院提醒」；已出院患者 → 校准待处理「随访节点」日期并补缺失节点。
+   判重键：类型|阶段；已完成的节点保持原日期不动。 */
+function syncSurgeryTasks(pid, p){
+  if (!p || !p['手术日期']) return Promise.resolve({ adds: 0, updates: 0 });
+  var base = fmtDate(p['手术日期']);
+  var hasFu = patientTasks(pid, '随访节点').length > 0;
+  var targetCat = hasFu ? '随访节点' : '住院提醒';
+  var adds = [], updates = [];
+  var exist = {};
+  patientTasks(pid).forEach(function(t){ exist[(t['类型'] || '') + '|' + (t['阶段'] || '')] = t; });
+  state.templates.filter(function(t){ return t['类别'] === targetCat && t['基准'] === '手术日'; })
+    .sort(function(a, b){ return (a['排序'] || 0) - (b['排序'] || 0); })
+    .forEach(function(t){
+      var key = targetCat + '|' + (t['名称'] || '未命名');
+      var nd = addDays(base, t['偏移天数'] || 0);
+      var ex = exist[key];
+      if (!ex){
+        adds.push({
+          '患者ID': pid, '患者姓名': p['姓名'], '类型': targetCat,
+          '事项类型': t['事项类型'] || '其他备注', '阶段': t['名称'] || '未命名',
+          '计划日期': nd, '内容': t['内容'] || '', '状态': '待处理', '更新时间': state.today
+        });
+      } else if (ex['状态'] === '待处理' && fmtDate(ex['计划日期']) !== nd){
+        updates.push({ id: ex._id, date: nd });
+      }
+    });
+  var chain = Promise.resolve();
+  adds.forEach(function(a){ chain = chain.then(function(){ return apiAdd('tasks', a); }); });
+  updates.forEach(function(u){ chain = chain.then(function(){ return apiUpdate('tasks', u.id, { '计划日期': u.date, '更新时间': state.today }); }); });
+  return chain.then(function(){ return { adds: adds.length, updates: updates.length }; });
+}
+
+/* ================= 结案 / 恢复随访 ================= */
+function closePatient(pid){
+  var p = findPatient(pid, null); if (!p) return;
+  var todo = patientTasks(pid).filter(function(t){ return t['状态'] === '待处理'; }).length;
+  openModal(
+    '<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>办理结案',
+    '<div style="font-size:14px;color:#374151">患者 <b>' + escapeHtml(p['姓名']) + '</b>' +
+    (todo ? '还有 <b style="color:var(--danger)">' + todo + '</b> 个未完成节点' : '随访节点已全部完成') + '。<br><br>' +
+    '结案后不再进入今日催办，可在板块二「已结案」筛选查看，纸质病历可随时打印；支持随时「恢复随访」。<br><br>确定结案？</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn ok" onclick="doClosePatient(\'' + pid + '\')">确认结案</button>'
+  );
+}
+function doClosePatient(pid){
+  apiUpdate('patients', pid, { '状态': '已结案', '更新时间': state.today }).then(function(){
+    closeModal(); toast('已结案，不再进入今日催办');
+    refreshAll().then(function(){ if (state.selectedPatientId === pid) renderDetail(); });
+  });
+}
+function reopenPatient(pid){
+  apiUpdate('patients', pid, { '状态': '随访中', '更新时间': state.today }).then(function(){
+    toast('已恢复随访');
+    refreshAll().then(function(){ if (state.selectedPatientId === pid) renderDetail(); });
   });
 }
 
@@ -2883,6 +2966,10 @@ window.openPatientDetail = openPatientDetail;
 window.backToList = backToList;
 window.dischargePatient = dischargePatient;
 window.doDischarge = doDischarge;
+window.syncSurgeryTasks = syncSurgeryTasks;
+window.closePatient = closePatient;
+window.doClosePatient = doClosePatient;
+window.reopenPatient = reopenPatient;
 window.openTaskModal = openTaskModal;
 window.completeTask = completeTask;
 window.skipTask = skipTask;
@@ -2919,6 +3006,13 @@ window.openChartModal = openChartModal;
 window.saveChart = saveChart;
 window.printChart = printChart;
 window.renderTrendStats = renderTrendStats;
+window.patientTasks = patientTasks;
+window.findPatient = findPatient;
+window.addDays = addDays;
+window.fmtDate = fmtDate;
+window.daysBetween = daysBetween;
+window.todayTasks = todayTasks;
+window.postLabel = postLabel;
 window.pickAttachment = pickAttachment;
 window.openAttachmentModal = openAttachmentModal;
 window.saveAttCap = saveAttCap;
