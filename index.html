@@ -354,6 +354,13 @@ mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
 .cs-row:last-child{border-bottom:none}
 .cs-k{color:var(--muted);min-width:84px;flex-shrink:0;font-weight:600}
 .cs-v{color:#374151;white-space:pre-wrap;word-break:break-word;flex:1}
+.fs-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fs-badge{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--primary-weak);color:var(--primary);font-size:12px;font-weight:600;border:1px solid #bfdbfe;white-space:nowrap}
+.fs-pick-item{padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#fff}
+.fs-pick-item:hover{border-color:#93c5fd}
+.fs-pick-item.cur{border-color:var(--primary);background:var(--primary-weak)}
+.fs-pick-name{font-weight:600;font-size:14px;color:var(--text)}
+.fs-pick-meta{font-size:12px;color:var(--muted);margin-top:2px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin-top:6px}
 .thumb-wrap{cursor:pointer}
 .thumb-box{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
@@ -526,6 +533,10 @@ mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
         <svg viewBox="0 0 24 24" data-page-node-id="5S4DEJSCpQD0dTDG6KHvN9"><path d="M12 5v14M5 12h14" data-page-node-id="6OQGfVWQ0Re5fB9cf64UAi"/></svg>
         新增随访内容模板
       </button>
+      <button class="btn ghost" onclick="openFieldsetModal()" data-page-node-id="fsNewBtn">
+        <svg viewBox="0 0 24 24" data-page-node-id="fsNewIco"><path d="M12 5v14M5 12h14" data-page-node-id="fsNewP1"/></svg>
+        新建病历字段集
+      </button>
     </div>
     <div id="tplList" data-page-node-id="fgWpVvwMe82lElc06K046G"></div>
     <div class="card card-pad" style="font-size:13px;color:var(--muted)" data-page-node-id="CFqCFyD9wZcmNlxJHLB9kZ">
@@ -616,7 +627,7 @@ var cloudMode = false;
 
 var state = {
   view: 'today',
-  patients: [], tasks: [], records: [], templates: [],
+  patients: [], tasks: [], records: [], templates: [], chartfieldsets: [],
   statusFilter: '全部',
   outFilter: '全部',
   selectedPatientId: null,
@@ -704,7 +715,8 @@ function getLocalState(){
     patients: c.patients || [],
     tasks: c.tasks || [],
     records: c.records || [],
-    templates: c.templates || []
+    templates: c.templates || [],
+    chartfieldsets: c.chartfieldsets || []
   };
 }
 /* 种子/演示数据标记为底层基线：不参与云端同步，且以代码为准始终覆盖，避免旧缓存回写云端污染默认模板 */
@@ -713,7 +725,7 @@ function seedIdSet(){
   if (SEED_IDS) return SEED_IDS;
   SEED_IDS = {};
   var s = buildSeed();
-  ['patients','tasks','records','templates'].forEach(function(k){ (s[k]||[]).forEach(function(r){ if (r && r._id) SEED_IDS[r._id] = true; }); });
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){ (s[k]||[]).forEach(function(r){ if (r && r._id) SEED_IDS[r._id] = true; }); });
   return SEED_IDS;
 }
 function userRows(arr){
@@ -723,7 +735,7 @@ function userRows(arr){
 function localUserState(){
   var c = loadCache();
   var out = {};
-  ['patients','tasks','records','templates'].forEach(function(k){ out[k] = userRows(c[k]); });
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){ out[k] = userRows(c[k]); });
   return out;
 }
 /* 以代码基线保证默认模板/演示数据始终存在且为最新（覆盖本地可能残留的旧内容）；不删除用户自建数据 */
@@ -732,7 +744,7 @@ function applySeedBaseline(){
   var obs = {};
   (OBSOLETE_TPLS || []).forEach(function(id){ obs[id] = true; });
   var c = loadCache();
-  ['patients','tasks','records','templates'].forEach(function(k){
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){
     var map = {};
     (c[k]||[]).forEach(function(r){ if (r && r._id) map[r._id] = r; });
     (seed[k]||[]).forEach(function(s){ map[s._id] = s; }); /* 种子 _id 始终以代码为准 */
@@ -920,7 +932,7 @@ function ghPullRaw(){
 /* 合并本地与远程：按 _id 取较新(_ts 大者优先)，实现多设备增量合并 */
 function mergedState(local, remote){
   var out = {};
-  ['patients','tasks','records','templates'].forEach(function(k){
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){
     var map = {};
     (remote && remote[k] ? remote[k] : []).forEach(function(r){ if (r && r._id) map[r._id] = r; });
     (local && local[k] ? local[k] : []).forEach(function(r){
@@ -935,7 +947,7 @@ function mergedState(local, remote){
 }
 function ghApplyMerged(merged){
   var c = loadCache();
-  ['patients','tasks','records','templates'].forEach(function(k){
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){
     var arr = (merged[k] || []).slice();
     var seedMap = {};
     (c[k] || []).forEach(function(r){ if (r && r._seed) seedMap[r._id] = r; });
@@ -1051,15 +1063,16 @@ function refreshAll(){
     apiQueryAll('patients'),
     apiQueryAll('tasks'),
     apiQueryAll('records'),
-    apiQueryAll('templates')
+    apiQueryAll('templates'),
+    apiQueryAll('chartfieldsets')
   ];
   return Promise.all(tasks).then(function(res){
-    state.patients = res[0]; state.tasks = res[1]; state.records = res[2]; state.templates = res[3];
+    state.patients = res[0]; state.tasks = res[1]; state.records = res[2]; state.templates = res[3]; state.chartfieldsets = res[4];
     setSyncBadge(cloudMode ? 'ok' : 'local');
     renderAll();
   }).catch(function(){
     var c = getLocalState();
-    state.patients = c.patients; state.tasks = c.tasks; state.records = c.records; state.templates = c.templates;
+    state.patients = c.patients; state.tasks = c.tasks; state.records = c.records; state.templates = c.templates; state.chartfieldsets = c.chartfieldsets;
     renderAll();
   });
 }
@@ -1289,6 +1302,40 @@ function patientCardHtml(p, mode){
 
 /* ================= 患者病历夹 / 附件 / 拍照识别（OCR） ================= */
 var CHART_FIELDS = ['主诉','现病史','既往史','查体','影像/辅助检查','初步诊断','手术记录摘要','出院情况'];
+/* 病历字段集预设：按亚专科定制结构化病历字段（内置，随种子基线始终以代码为准） */
+var CHART_FIELDSETS_PRESETS = [
+  { _id: 'seed_fs_general', '名称': '通用骨科', '说明': '创伤/普通骨科通用，适合大多数骨折患者', '内置': true,
+    '字段': ['主诉','现病史','既往史','查体','影像/辅助检查','初步诊断','手术记录摘要','出院情况'] },
+  { _id: 'seed_fs_joint', '名称': '关节置换', '说明': 'THA/TKA 围手术期：关节功能评分与假体随访', '内置': true,
+    '字段': ['主诉','现病史','既往史','专科查体(关节活动度/肌力)','影像/辅助检查','初步诊断','手术记录摘要(假体/入路)','出院情况','随访要点(HSS/KSS 评分)'] },
+  { _id: 'seed_fs_sports', '名称': '运动医学', '说明': '关节镜/韧带/半月板/肩袖：损伤机制与专科查体', '内置': true,
+    '字段': ['主诉(损伤机制)','现病史','既往史','专科查体(Lachman/轴移/Neer)','关节镜检所见','影像/辅助检查','初步诊断','手术记录摘要','出院情况','重返运动标准'] },
+  { _id: 'seed_fs_pediatric', '名称': '儿童骨科', '说明': '儿童患者：监护人代诉、生长发育与力线步态评估', '内置': true,
+    '字段': ['主诉(监护人代诉)','现病史','既往史(出生史/家族史)','专科查体(生长发育/力线/步态)','影像/辅助检查','初步诊断','手术记录摘要','出院情况','家属宣教要点'] }
+];
+/* 字段集解析：患者级设置 > 本机默认集 > 通用骨科 */
+var _chartEdit = null; /* { pid, fields } 编辑中病历的字段快照，避免保存时字段集已被切换导致串写 */
+function findFieldset(id){
+  if (!id) return null;
+  for (var i = 0; i < state.chartfieldsets.length; i++){ if (state.chartfieldsets[i]._id === id) return state.chartfieldsets[i]; }
+  return null;
+}
+function getDefaultFieldsetId(){ try { return localStorage.getItem(PREFIX + 'default_fieldset') || 'seed_fs_general'; } catch(e){ return 'seed_fs_general'; } }
+function setDefaultFieldsetId(id){ try { localStorage.setItem(PREFIX + 'default_fieldset', id); } catch(e){} }
+function fsFields(fs){ return (fs && fs['字段'] && fs['字段'].length) ? fs['字段'] : CHART_FIELDS; }
+function getChartFieldset(pid){
+  var p = pid ? getPatient(pid) : null;
+  if (p && p['病历字段集']){ var fs = findFieldset(p['病历字段集']); if (fs) return fs; }
+  var def = findFieldset(getDefaultFieldsetId());
+  if (def) return def;
+  return findFieldset('seed_fs_general') || { _id: 'seed_fs_general', '名称': '通用骨科', '字段': CHART_FIELDS };
+}
+/* 病历展示用字段列表：字段集字段 + 历史病历中已存在但不在当前字段集内的键（防止切换字段集后旧内容不再显示） */
+function chartDisplayFields(fields, chart){
+  var list = fields.slice();
+  for (var k in chart){ if (chart.hasOwnProperty(k) && chart[k] && list.indexOf(k) < 0) list.push(k); }
+  return list;
+}
 var _objUrls = [];
 function revokeObjUrls(){ _objUrls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} }); _objUrls = []; }
 function getPatient(pid){ for (var i=0;i<state.patients.length;i++){ if (state.patients[i]._id===pid) return state.patients[i]; } return null; }
@@ -1304,15 +1351,28 @@ function idbUrl(id){ return idbGet(id).then(function(b){ if(!b) return null; var
 function openChartModal(pid){
   var p=getPatient(pid); if(!p) return;
   var chart=p['病历']||{};
-  var rows=CHART_FIELDS.map(function(f, i){ return '<div class="form-row"><label>'+escapeHtml(f)+'</label><textarea id="cf_'+i+'" placeholder="'+escapeHtml(f)+'">'+escapeHtml(chart[f]||'')+'</textarea></div>'; }).join('');
+  var fs=getChartFieldset(pid);
+  /* 字段集字段 + 已存在的集外键（切换字段集前写入的内容，保留可编辑，避免保存时丢失） */
+  var fields=chartDisplayFields(fsFields(fs), chart);
+  _chartEdit={ pid:pid, fields:fields };
+  var rows=fields.map(function(f, i){ return '<div class="form-row"><label>'+escapeHtml(f)+'</label><textarea id="cf_'+i+'" placeholder="'+escapeHtml(f)+'">'+escapeHtml(chart[f]||'')+'</textarea></div>'; }).join('');
+  var fsBar='<div class="fs-bar"><span class="fs-badge">字段集：'+escapeHtml(fs['名称']||'通用骨科')+'</span>'+
+    '<span style="font-size:12px;color:var(--muted)">按亚专科定制字段</span>'+
+    '<button class="btn ghost sm" onclick="openFieldsetPicker(\''+pid+'\',true)">切换</button></div>';
+  var extra=fields.length - fsFields(fs).length;
+  var extraNote = extra>0 ? '<div style="font-size:12px;color:var(--warn);margin-top:6px">⚠ 含 '+extra+' 个其他字段集写入的字段（保存时自动保留，不会丢失）。</div>' : '';
   openModal('<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>骨科病历夹',
-    '<div class="form-grid">'+rows+'</div><div style="font-size:12px;color:var(--muted);margin-top:6px">病历文本随患者多端同步；图片/视频见下方「附件」，本机存储。</div>',
+    fsBar+'<div class="form-grid">'+rows+'</div>'+extraNote+'<div style="font-size:12px;color:var(--muted);margin-top:6px">病历文本随患者多端同步；图片/视频见下方「附件」，本机存储。</div>',
     '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveChart(\''+pid+'\')">保存病历</button>');
 }
 function saveChart(pid){
+  var fields=(_chartEdit && _chartEdit.pid===pid) ? _chartEdit.fields : chartDisplayFields(fsFields(getChartFieldset(pid)), (getPatient(pid)||{})['病历']||{});
   var chart={};
-  CHART_FIELDS.forEach(function(f, i){ var el=document.getElementById('cf_'+i); var v=el?el.value.trim():''; if(v) chart[f]=v; });
-  apiUpdate('patients', pid, { '病历': chart }).then(function(){ closeModal(); toast('病历已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
+  fields.forEach(function(f, i){ var el=document.getElementById('cf_'+i); var v=el?el.value.trim():''; if(v) chart[f]=v; });
+  /* 双保险：字段集之外的旧键（如其他设备用别的字段集写入）原样保留 */
+  var old=(getPatient(pid)||{})['病历']||{};
+  for (var k in old){ if (old.hasOwnProperty(k) && old[k] && fields.indexOf(k)<0) chart[k]=old[k]; }
+  apiUpdate('patients', pid, { '病历': chart }).then(function(){ _chartEdit=null; closeModal(); toast('病历已保存'); refreshAll().then(function(){ if(state.selectedPatientId===pid) renderDetail(); }); });
 }
 /* 拍照 / 上传附件（原文件存 IndexedDB，元数据写患者） */
 function pickAttachment(pid, kind){
@@ -1454,7 +1514,7 @@ function runOCR(attId, pid){
 }
 function ocrResultUI(text, pid, noteHtml){
   var opts='<option value="__draft__">识别草稿（不写入病历）</option>'+
-    CHART_FIELDS.map(function(f){ return '<option value="'+f+'">'+escapeHtml(f)+'</option>'; }).join('');
+    fsFields(getChartFieldset(pid)).map(function(f){ return '<option value="'+f+'">'+escapeHtml(f)+'</option>'; }).join('');
   return '<div style="font-size:12px;color:var(--muted);margin:10px 0 6px">'+noteHtml+'</div>'+
     '<textarea id="ocrText" style="min-height:170px" placeholder="识别结果将显示在这里，也可手动粘贴或输入文字">'+escapeHtml(text||'')+'</textarea>'+
     '<div class="form-row" style="margin-top:10px"><label>填入到病历字段</label><select id="ocrField">'+opts+'</select></div>'+
@@ -1589,15 +1649,18 @@ function gsJumpRecord(pid){ if(!pid) return; closeGlobalSearch(); state.selected
 /* 病历夹区块（编辑按钮 + 附件画廊） */
 function renderChartSection(p){
   var atts=p['附件']||[];
+  var fs=getChartFieldset(p._id);
   var html='<div class="card card-pad" style="margin-top:14px">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 class="sec-title" style="margin:0">📁 患者病历夹（骨科）</h2>';
   html+='<div class="media-bar" style="margin:0"><button class="btn ghost sm" onclick="openChartModal(\''+p._id+'\')">✏️ 编辑病历</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'camera\')">📷 拍照</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'image\')">🖼️ 图片</button>';
   html+='<button class="btn ghost sm" onclick="pickAttachment(\''+p._id+'\',\'video\')">🎬 视频</button></div></div>';
+  html+='<div class="fs-bar" style="margin:6px 0 8px"><span class="fs-badge">字段集：'+escapeHtml(fs['名称']||'通用骨科')+'</span>'+
+    '<button class="btn ghost sm" onclick="openFieldsetPicker(\''+p._id+'\')">切换字段集</button></div>';
   html+='<div style="font-size:12px;color:var(--muted);margin:6px 0 8px">病历文本多端同步；图片/视频本机存储，元数据同步（原文件仅存采集设备）。</div>';
   var chart=p['病历']||{};
-  var cf=CHART_FIELDS.filter(function(f){ return chart[f]; });
+  var cf=chartDisplayFields(fsFields(fs), chart).filter(function(f){ return chart[f]; });
   if (cf.length) html+='<div class="chart-sum">'+cf.map(function(f){ return '<div class="cs-row"><span class="cs-k">'+escapeHtml(f)+'</span><span class="cs-v">'+escapeHtml(chart[f])+'</span></div>'; }).join('')+'</div>';
   if (atts.length){
     html+='<div class="gallery">';
@@ -1616,7 +1679,7 @@ function renderChartSection(p){
 function renderPanorama(p){
   var items=[];
   patientTasks(p._id).forEach(function(t){ items.push({ kind:'提醒', ksub:(t['类型']||''), date:t['计划日期']||'', title:t['阶段']||'提醒', status:t['状态']||'', content:t['内容']||'' }); });
-  var chart=p['病历']||{}; var cf=CHART_FIELDS.filter(function(f){ return chart[f]; });
+  var chart=p['病历']||{}; var cf=chartDisplayFields(fsFields(getChartFieldset(p._id)), chart).filter(function(f){ return chart[f]; });
   if (cf.length) items.push({ kind:'病历', date:p['入院日期']||'', title:'骨科病历', content:cf.map(function(f){ return f+'：'+(chart[f]||''); }).join('；') });
   (p['附件']||[]).forEach(function(a){ items.push({ kind:'资料', ksub:(a.type==='video'?'视频':'图片'), date:a.ts||'', title:a.name||'附件', content:a.caption||'' }); });
   items.sort(function(x,y){ return (fmtDate(x.date)<fmtDate(y.date))?-1:1; });
@@ -1770,6 +1833,35 @@ function openPatientDetail(id){
 }
 
 /* ================= 渲染：模板 ================= */
+/* ================= 病历字段集管理（模板库内置区） ================= */
+function renderFieldsetSection(){
+  var list = state.chartfieldsets || [];
+  var defId = getDefaultFieldsetId();
+  var html = '<div class="tpl-group"><h2 class="sec-title">📋 病历字段集 <span style="font-size:12px;font-weight:400;color:var(--muted)">按亚专科定制「骨科病历夹」的结构化字段，新建患者时自动套用默认集</span></h2>';
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">当前默认字段集（本机设置，新建患者时使用）：<b>' + escapeHtml((findFieldset(defId) || {})['名称'] || '通用骨科') + '</b>。患者可单独指定字段集；病历内容按字段名存储，切换字段集不丢失已有内容。</div>';
+  if (!list.length){
+    html += '<div class="tl-empty">暂无字段集，点击右上角「新建病历字段集」创建</div>';
+  }
+  list.forEach(function(fs){
+    if (!fs) return;
+    var isDef = fs._id === defId;
+    var builtin = fs._id && fs._id.indexOf('seed_') === 0;
+    var flds = fs['字段'] || [];
+    html += '<div class="tpl-card"><div class="t-top"><span class="tpl-name">' + escapeHtml(fs['名称'] || '未命名字段集') + '</span>' +
+      (isDef ? '<span class="badge b-done">默认</span>' : '') +
+      (builtin ? '<span class="badge">内置</span>' : '') +
+      '<span class="badge b-skip">' + flds.length + ' 个字段</span></div>';
+    if (fs['说明']) html += '<div class="tpl-meta"><span class="m">' + escapeHtml(fs['说明']) + '</span></div>';
+    html += '<div class="tpl-content">' + escapeHtml(flds.join(' ｜ ')) + '</div>';
+    html += '<div class="tpl-actions">' +
+      (isDef ? '' : '<button class="btn ghost sm" onclick="setDefaultFieldset(\'' + fs._id + '\')">设为默认</button>') +
+      '<button class="btn ghost sm" onclick="openFieldsetModal(null,\'' + fs._id + '\')">复制副本</button>' +
+      (builtin ? '' : '<button class="btn ghost sm" onclick="openFieldsetModal(\'' + fs._id + '\')">编辑</button><button class="btn danger sm" onclick="deleteFieldset(\'' + fs._id + '\')">删除</button>') +
+      '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
 function renderTemplates(){
   var el = document.getElementById('tplList');
   var groups = [
@@ -1777,7 +1869,7 @@ function renderTemplates(){
     { key: '随访节点', desc: '出院时生成：手术患者按手术日、非手术患者按出院日' },
     { key: '随访内容', desc: '处理随访时一键填入记录' }
   ];
-  var html = '';
+  var html = renderFieldsetSection();
   groups.forEach(function(g){
     var items = state.templates.filter(function(t){ return t['类别'] === g.key; })
       .sort(function(a,b){ return (a['排序']||0) - (b['排序']||0); });
@@ -1800,7 +1892,79 @@ function renderTemplates(){
   });
   el.innerHTML = html;
 }
-
+/* 新建 / 编辑 / 复制 病历字段集 */
+function openFieldsetModal(id, copyFromId){
+  var fs = null;
+  if (id){ fs = findFieldset(id); if (!fs) return; }
+  else if (copyFromId){ fs = findFieldset(copyFromId); }
+  var flds = (fs && fs['字段']) ? fs['字段'].join('\n') : '';
+  var title = id ? '编辑病历字段集' : (copyFromId ? '复制病历字段集' : '新建病历字段集');
+  openModal('<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>' + title,
+    '<div class="form-row"><label>字段集名称 <span class="req">*</span></label><input type="text" id="fsName" value="' + escapeHtml((fs ? fs['名称'] : '') + (copyFromId ? ' 副本' : '')) + '" placeholder="如：关节置换"></div>' +
+    '<div class="form-row"><label>说明（可选）</label><input type="text" id="fsDesc" value="' + escapeHtml(fs ? (fs['说明'] || '') : '') + '" placeholder="适用场景，如 THA/TKA 围手术期"></div>' +
+    '<div class="form-row"><label>字段列表（每行一个，顺序即病历夹展示顺序）</label><textarea id="fsFields" style="min-height:180px" placeholder="主诉&#10;现病史&#10;既往史">' + escapeHtml(flds) + '</textarea></div>' +
+    '<div style="font-size:12px;color:var(--muted)">内置字段集不可直接修改，可「复制副本」后自定义；病历按字段名存储，增删字段不影响已有内容。</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveFieldset(\'' + (id || '') + '\')">保存</button>');
+}
+function saveFieldset(id){
+  var name = document.getElementById('fsName').value.trim();
+  var desc = document.getElementById('fsDesc').value.trim();
+  var fields = document.getElementById('fsFields').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+  if (!name){ toast('请填写字段集名称', true); return; }
+  if (!fields.length){ toast('请至少填写一个字段', true); return; }
+  var row = { '名称': name, '说明': desc, '字段': fields };
+  var p = id ? apiUpdate('chartfieldsets', id, row) : apiAdd('chartfieldsets', row);
+  p.then(function(){
+    closeModal();
+    toast(id ? '字段集已更新' : '字段集已创建');
+    refreshAll().then(function(){ if (state.view === 'templates') renderTemplates(); });
+  });
+}
+function deleteFieldset(id){
+  var fs = findFieldset(id); if (!fs) return;
+  var users = state.patients.filter(function(p){ return p['病历字段集'] === id; }).length;
+  openModal('<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>删除病历字段集',
+    '<div style="font-size:14px;color:#374151">确定删除字段集「<b>' + escapeHtml(fs['名称'] || '') + '</b>」？' +
+    (users ? '<br><b style="color:var(--danger)">有 ' + users + ' 位患者正在使用该字段集，删除后将回退为默认字段集（已有病历内容不丢失）。</b>' : '') + '</div>',
+    '<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn danger" onclick="doDeleteFieldset(\'' + id + '\')">确认删除</button>');
+}
+function doDeleteFieldset(id){
+  apiRemove('chartfieldsets', id).then(function(){
+    closeModal(); toast('字段集已删除');
+    refreshAll().then(function(){ if (state.view === 'templates') renderTemplates(); });
+  });
+}
+function setDefaultFieldset(id){
+  var fs = findFieldset(id); if (!fs) return;
+  setDefaultFieldsetId(id);
+  toast('默认字段集已设为「' + (fs['名称'] || '') + '」');
+  if (state.view === 'templates') renderTemplates();
+}
+/* 患者级字段集选择器（fromChart=true 时选择后重新打开病历编辑窗） */
+function openFieldsetPicker(pid, fromChart){
+  var p = getPatient(pid); if (!p) return;
+  var cur = p['病历字段集'] || '';
+  var items = (state.chartfieldsets || []).map(function(fs){
+    if (!fs) return '';
+    var sel = fs._id === cur;
+    return '<div class="fs-pick-item' + (sel ? ' cur' : '') + '" onclick="pickFieldset(\'' + pid + '\',\'' + fs._id + '\',' + (fromChart ? 'true' : 'false') + ')">' +
+      '<div class="fs-pick-name">' + escapeHtml(fs['名称'] || '未命名') + (fs._id === getDefaultFieldsetId() ? ' <span class="badge b-done">默认</span>' : '') + '</div>' +
+      '<div class="fs-pick-meta">' + (fs['字段'] || []).length + ' 个字段' + (fs['说明'] ? ' · ' + escapeHtml(fs['说明']) : '') + '</div></div>';
+  }).join('');
+  openModal('<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>切换病历字段集',
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">为该患者选择结构化病历字段集；病历按字段名存储，切换后已有内容保留不丢失。</div>' + (items || '<div class="tl-empty">暂无可选字段集，请到「模板库」新建</div>'),
+    '<button class="btn ghost" onclick="closeModal()">取消</button>');
+}
+function pickFieldset(pid, fsId, fromChart){
+  apiUpdate('patients', pid, { '病历字段集': fsId }).then(function(){
+    closeModal();
+    toast('字段集已切换');
+    refreshAll().then(function(){
+      if (state.selectedPatientId === pid) renderDetail();
+      if (fromChart) openChartModal(pid);
+    });
+  });
+}
 /* ================= 视图切换 ================= */
 function switchView(v){
   state.view = v;
@@ -1849,6 +2013,9 @@ function patientFormHtml(p){
   '</div>' +
   '<div class="form-row"><label>诊断</label><input type="text" id="fDiag" value="' + escapeHtml(p['诊断']||'') + '" placeholder="如：右股骨颈骨折"></div>' +
   '<div class="form-row"><label>术式</label><input type="text" id="fOp" value="' + escapeHtml(p['术式']||'') + '" placeholder="如：右人工全髋关节置换术"></div>' +
+  '<div class="form-row"><label>病历字段集</label><select id="fFieldset"><option value="">跟随默认（' + escapeHtml((findFieldset(getDefaultFieldsetId()) || {})['名称'] || '通用骨科') + '）</option>' +
+  (state.chartfieldsets || []).map(function(fs){ if (!fs) return ''; return '<option value="' + fs._id + '"' + (p['病历字段集'] === fs._id ? ' selected' : '') + '>' + escapeHtml(fs['名称'] || '未命名') + '</option>'; }).join('') +
+  '</select></div>' +
   '<div class="form-row"><label>备注</label><textarea id="fNote" placeholder="过敏史、基础疾病、特殊注意事项等">' + escapeHtml(p['备注']||'') + '</textarea></div>' +
   (!p._id ? '<div class="form-check"><input type="checkbox" id="fUseTpl" checked><label for="fUseTpl" style="margin:0">入院后按「住院提醒」模板自动生成提醒（以入院日为基准）</label></div>' : '');
 }
@@ -1887,6 +2054,7 @@ function savePatient(isEdit){
     '手术日期': document.getElementById('fOpDate').value || null,
     '诊断': document.getElementById('fDiag').value.trim(),
     '术式': document.getElementById('fOp').value.trim(),
+    '病历字段集': (document.getElementById('fFieldset') ? document.getElementById('fFieldset').value : '') || null,
     '主治医师': document.getElementById('fDoc').value.trim(),
     '备注': document.getElementById('fNote').value.trim(),
     '更新时间': state.today
@@ -2255,7 +2423,8 @@ function collectAll(){
     patients: state.patients,
     tasks: state.tasks,
     records: state.records,
-    templates: state.templates
+    templates: state.templates,
+    chartfieldsets: state.chartfieldsets
   };
 }
 function exportData(){
@@ -2277,10 +2446,10 @@ function importData(input){
     try {
       var data = JSON.parse(reader.result);
       if (!data.patients) throw new Error('bad');
-      var pn = (data.patients||[]).length, tn = (data.tasks||[]).length, rn = (data.records||[]).length, tpn = (data.templates||[]).length;
+      var pn = (data.patients||[]).length, tn = (data.tasks||[]).length, rn = (data.records||[]).length, tpn = (data.templates||[]).length, fsn = (data.chartfieldsets||[]).length;
       openModal(
         '<svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>导入备份',
-        '<div style="font-size:14px;color:#374151">备份包含：患者 <b>' + pn + '</b> 人、任务 <b>' + tn + '</b> 条、记录 <b>' + rn + '</b> 条、模板 <b>' + tpn + '</b> 条。<br><br>导入将<b>合并新增</b>到当前数据（患者按住院号+姓名去重），不删除现有数据。<br><br>确定导入？</div>',
+        '<div style="font-size:14px;color:#374151">备份包含：患者 <b>' + pn + '</b> 人、任务 <b>' + tn + '</b> 条、记录 <b>' + rn + '</b> 条、模板 <b>' + tpn + '</b> 条、病历字段集 <b>' + fsn + '</b> 套。<br><br>导入将<b>合并新增</b>到当前数据（患者按住院号+姓名去重），不删除现有数据。<br><br>确定导入？</div>',
         '<button class="btn ghost" onclick="closeModal();document.getElementById(\'importFile\').value=\'\'">取消</button><button class="btn" onclick="doImport(\'' + encodeURIComponent(JSON.stringify(data)) + '\')">确认导入</button>'
       );
     } catch(e){
@@ -2321,6 +2490,16 @@ function doImport(encoded){
     var row = {};
     for (var k4 in tp){ if (tp.hasOwnProperty(k4) && k4 !== '_id') row[k4] = tp[k4]; }
     chain = chain.then(function(){ return apiAdd('templates', row); });
+  });
+  // 病历字段集：按 _id 去重（避免导入后出现重名字段集）
+  var haveFs = {};
+  state.chartfieldsets.forEach(function(f){ if (f && f._id) haveFs[f._id] = true; });
+  (data.chartfieldsets || []).forEach(function(fs){
+    if (!fs || (fs._id && haveFs[fs._id])) return;
+    if (fs._id) haveFs[fs._id] = true;
+    var row = {};
+    for (var k5 in fs){ if (fs.hasOwnProperty(k5) && k5 !== '_id') row[k5] = fs[k5]; }
+    chain = chain.then(function(){ return apiAdd('chartfieldsets', row); });
   });
   chain.then(function(){
     closeModal();
@@ -2384,9 +2563,10 @@ function buildSeed(){
     records: [
       { _id: 'seed_r1', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '日期': d(-19), '类型': '住院', '内容': '术后当日', '结果': '手术顺利，生命体征平稳，患肢末梢血运良好' },
       { _id: 'seed_r2', '患者ID': 'seed_p1', '患者姓名': '张三(演示)', '日期': d(-12), '类型': '随访', '内容': '电话随访', '结果': '切口愈合良好无红肿，已指导居家康复训练' }
-    ]
+    ],
+    chartfieldsets: CHART_FIELDSETS_PRESETS
   };
-  ['patients','tasks','records','templates'].forEach(function(k){ (__s[k]||[]).forEach(function(r){ if (r) r._seed = true; }); });
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){ (__s[k]||[]).forEach(function(r){ if (r) r._seed = true; }); });
   return __s;
 }
 function seedIfEmpty(){
@@ -2432,7 +2612,7 @@ function seedUpgrade(){
 
 function initSchema(){
   cloudMode = ghOk();
-  ['patients','tasks','records','templates'].forEach(function(k){ SCHEMA_OPTS[k] = { fields: {}, selects: {} }; });
+  ['patients','tasks','records','templates','chartfieldsets'].forEach(function(k){ SCHEMA_OPTS[k] = { fields: {}, selects: {} }; });
   var sub = document.getElementById('headerSub');
   if (!cloudMode){
     setSyncBadge('local');
@@ -2543,7 +2723,7 @@ function testSync(){
   cloudMode = true;
   setSyncBadge('syncing');
   ghPullRaw().then(function(remote){
-    toast(remote.data ? ('连接成功，已读取云端数据（' + ['patients','tasks','records','templates'].filter(function(k){ return remote.data[k] && remote.data[k].length; }).length + ' 类有记录）') : '连接成功，云端暂无数据，保存后将自动创建文件');
+    toast(remote.data ? ('连接成功，已读取云端数据（' + ['patients','tasks','records','templates','chartfieldsets'].filter(function(k){ return remote.data[k] && remote.data[k].length; }).length + ' 类有记录）') : '连接成功，云端暂无数据，保存后将自动创建文件');
     setSyncBadge('ok');
   }).catch(function(e){ setSyncBadge('error'); toast('连接失败：' + (e.message||e), true); });
 }
@@ -2573,6 +2753,13 @@ window.openTemplateModal = openTemplateModal;
 window.saveTemplate = saveTemplate;
 window.deleteTemplate = deleteTemplate;
 window.doDeleteTemplate = doDeleteTemplate;
+window.openFieldsetModal = openFieldsetModal;
+window.saveFieldset = saveFieldset;
+window.deleteFieldset = deleteFieldset;
+window.doDeleteFieldset = doDeleteFieldset;
+window.setDefaultFieldset = setDefaultFieldset;
+window.openFieldsetPicker = openFieldsetPicker;
+window.pickFieldset = pickFieldset;
 window.clearDemoData = clearDemoData;
 window.doClearDemo = doClearDemo;
 window.exportData = exportData;
@@ -2595,6 +2782,13 @@ window.delAttachment = delAttachment;
 window.runOCR = runOCR;
 window.applyOcr = applyOcr;
 window.loadGallery = loadGallery;
+window.getChartFieldset = getChartFieldset;
+window.findFieldset = findFieldset;
+window.fsFields = fsFields;
+window.chartDisplayFields = chartDisplayFields;
+window.getDefaultFieldsetId = getDefaultFieldsetId;
+window.setDefaultFieldsetId = setDefaultFieldsetId;
+window.renderTemplates = renderTemplates;
 window.state = state;
 window.renderDetail = renderDetail;
 window.openGlobalSearch = openGlobalSearch;
